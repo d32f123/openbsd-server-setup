@@ -6,7 +6,10 @@ chsh -s "$(which zsh)"
 # setup shell
 pushd
 git clone --depth 1 https://github.com/d32f123/shell-environment.git
-./shell-environment/setup.sh
+
+cd shell-environment && ./setup.sh
+cd -
+rm -rf shell-environment
 popd
 
 source ~/.config/zsh/.zshrc
@@ -15,5 +18,3 @@ source ~/.config/zsh/.zshrc
 pushd $ZSH/custom/themes/powerlevel10k/gitstatus
 bash build -w
 popd
-
-# tmux-plugin-sysstat CPU and MEM are failing on OpenBSD, patch the issues
