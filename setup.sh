@@ -7,5 +7,6 @@ export USER_NAME; export DOMAIN_NAME
 BASE="$(pwd)"
 SCRIPTS="$BASE/scripts"
 
-"$SCRIPTS/bootstrap.sh"
-"$SCRIPTS/shell.sh"
+"$SCRIPTS/001_bootstrap.sh"
+"$SCRIPTS/002_shell.sh"
+"$SCRIPTS/003_nginx.sh"
