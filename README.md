@@ -6,16 +6,25 @@
 * Web server – nginx with automatic http to https redirect and A+ SSL
 * Mail server – OpenSMTPD, Dovecot, Rspamd, RainLoop
 
-## Shell setup
+## Script parameters
 
-After installing OpenBSD, first steps should be to get a usable shell
+`USER_NAME` – the user which will be used for everything in the script. Defaults to current user.
+`DOMAIN_NAME` – the domain name to create websites for. Defaults to `$(hostname | cut -d. -f2-)`
 
-```shell
-# setup doas
-echo "permit nopass anesterov as root" > /etc/doas.conf
-pkg_add vim
-```
+## Script stages
 
-## SSH Connection
-Let's now set up an ssh server so that we will be able to ssh into it.
+### Stage 1 – bootstrap
+
+Bootstrap stage enables main user to do `doas` and downloads all needed dependencies
+
+### Stage 2 – shell setup
+
+Sets up zsh, tmux
+
+### Stage 3 – nginx setup
+
+1. Creates nginx configuration and logs directories.
+2. Creates nginx configurations for domain.xxx and mail.domain.xxx
+3. Gets certificates via certbot
+4. Switches nginx configuration to use only secure versions of domains
 
