@@ -15,16 +15,19 @@ doas chown ${NGINX_USER}:${NGINX_GROUP} $NGINX_LOGS
 echo "Setting up $NGINX_CONF directory"
 doas mkdir $NGINX_CONF/{sites-available,sites-enabled}
 
+doas cp nginx/{nginx.conf,secure,secure_only,www_redirect,certbot_enabler} $NGINX_CONF/
+doas chown ${NGINX_USER}:${NGINX_GROUP} $NGINX_CONF/{nginx.conf,secure,secure_only,www_redirect,certbot_enabler}
+
 sites="${DOMAIN_NAME} mail.${DOMAIN_NAME}"
 echo "Creating nginx configurations for the following sites: $sites"
 for site in $sites; do
     doas mkdir $NGINX_WWW/$site
     doas chown ${NGINX_USER}:${NGINX_GROUP} $NGINX_WWW/$site
 
-    sed -E "s/{{domain}}/${site}/gp" nginx/site-templates/insecure.site | doas tee $NGINX_CONF/sites-available/${site}.insecure.site
-    sed -E "s/{{domain}}/${site}/gp" nginx/site-templates/secure.site | doas tee $NGINX_CONF/sites-available/${site}.secure.site
+    sed -E "s/{{domain}}/${site}/g" nginx/site-templates/insecure.site | doas tee $NGINX_CONF/sites-available/${site}.insecure.site
+    sed -E "s/{{domain}}/${site}/g" nginx/site-templates/secure.site | doas tee $NGINX_CONF/sites-available/${site}.secure.site
 
-    doas ln -s $NGINX_CONF/{sites-available,sites-enabled}/${site}.insecure.site
+    doas ln -s -f $NGINX_CONF/{sites-available,sites-enabled}/${site}.insecure.site
 done
 
 echo "Generating prompt for site $DOMAIN_NAME"
@@ -34,11 +37,14 @@ echo "$SITE_PROMPT" | doas tee $NGINX_WWW/$DOMAIN_NAME/index.html
 echo "Reloading nginx with sites' configurations"
 doas /etc/rc.d/nginx restart
 
-echo "Generating DH"
-doas mkdir /etc/ssl/certs
-pushd /etc/ssl/certs
-doas openssl dhparam -out dh.pem 4096
-popd
+if [ ! -f /etc/ssl/certs/dh.pem ]
+then
+    echo "Generating DH"
+    doas mkdir -p /etc/ssl/certs
+    cd /etc/ssl/certs
+    doas openssl dhparam -out dh.pem 4096
+    cd -
+fi
 
 echo "Getting SSL certificates, switching to secure sites"
 for site in $sites; do
@@ -50,4 +56,4 @@ doas /etc/rc.d/nginx reload
 
 echo "Creating a cron job to update certificates weekly"
 CRONJOB="@weekly $(which certbot) renew --quiet --force-renewal --post-hook '/etc/rc.d/nginx reload'"
-{ doas crontab -l 2>/dev/null ; echo "$CRONJOB" } | doas crontab -
+{ doas crontab -l 2>/dev/null ; echo "$CRONJOB" ; } | doas crontab -
