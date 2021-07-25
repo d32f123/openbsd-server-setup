@@ -18,9 +18,8 @@ doas mkdir $NGINX_CONF/{sites-available,sites-enabled}
 doas cp nginx/{nginx.conf,secure,secure_only,www_redirect,certbot_enabler} $NGINX_CONF/
 doas chown ${NGINX_USER}:${NGINX_GROUP} $NGINX_CONF/{nginx.conf,secure,secure_only,www_redirect,certbot_enabler}
 
-sites="${DOMAIN_NAME} mail.${DOMAIN_NAME}"
-echo "Creating nginx configurations for the following sites: $sites"
-for site in $sites; do
+echo "Creating nginx configurations for the following sites: $NGINX_DOMAINS"
+for site in $NGINX_DOMAINS; do
     doas mkdir $NGINX_WWW/$site
     doas chown ${NGINX_USER}:${NGINX_GROUP} $NGINX_WWW/$site
 
@@ -36,24 +35,3 @@ echo "$SITE_PROMPT" | doas tee $NGINX_WWW/$DOMAIN_NAME/index.html
 
 echo "Reloading nginx with sites' configurations"
 doas /etc/rc.d/nginx restart
-
-if [ ! -f /etc/ssl/certs/dh.pem ]
-then
-    echo "Generating DH"
-    doas mkdir -p /etc/ssl/certs
-    cd /etc/ssl/certs
-    doas openssl dhparam -out dh.pem 4096
-    cd -
-fi
-
-echo "Getting SSL certificates, switching to secure sites"
-for site in $sites; do
-    doas certbot certonly --webroot --agree-tos -m "$USER_NAME@$DOMAIN_NAME" -d "$site" -w $NGINX_WWW/$site
-    doas ln -s -f $NGINX_CONF/{sites-available,sites-enabled}/${site}.secure.site
-    doas rm $NGINX_CONF/sites-enabled/${site}.insecure.site
-done
-doas /etc/rc.d/nginx reload
-
-echo "Creating a cron job to update certificates weekly"
-CRONJOB="@weekly $(which certbot) renew --quiet --force-renewal --post-hook '/etc/rc.d/nginx reload'"
-{ doas crontab -l 2>/dev/null ; echo "$CRONJOB" ; } | doas crontab -

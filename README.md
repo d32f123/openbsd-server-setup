@@ -25,6 +25,8 @@ Sets up zsh, tmux
 
 1. Creates nginx configuration and logs directories.
 2. Creates nginx configurations for domain.xxx and mail.domain.xxx
-3. Gets certificates via certbot
-4. Switches nginx configuration to use only secure versions of domains
 
+### Stage 4 – nginx SSL setup
+
+1. Gets certificates via certbot
+2. Switches nginx configuration to use only secure versions of domains
