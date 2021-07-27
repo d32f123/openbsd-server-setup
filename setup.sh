@@ -30,7 +30,10 @@ echo "Using ${USER_NAME} as main username"
 echo "Using ${DOMAIN_NAME} as domain name"
 export USER_NAME; export DOMAIN_NAME
 
-NGINX_DOMAINS="$DOMAIN_NAME mail.$DOMAIN_NAME"
+MAIL_DOMAIN="mail.$DOMAIN_NAME"
+export MAIL_DOMAIN
+
+NGINX_DOMAINS="$DOMAIN_NAME $MAIL_DOMAIN"
 echo "Will setup these domains: $NGINX_DOMAINS"
 export NGINX_DOMAINS
 

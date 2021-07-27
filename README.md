@@ -6,6 +6,19 @@
 * Web server – nginx with automatic http to https redirect and A+ SSL
 * Mail server – OpenSMTPD, Dovecot, Rspamd, RainLoop
 
+## Prerequisites
+You will have to set up some DNS records prior to running this script.
+Create the following DNS records:
+```
+*.{domain}.	300	IN	A	{ip}
+{domain}.	300	IN	A	{ip}
+www.{domain}	300	IN	A	{ip}
+
+;; DNS records for mail (will be output after stage 5)
+{domain}.	300	IN	MX	0 mail.{domain}. ;; so that people know which server serves mail for {domain}
+@      IN TXT  "v=spf1 mx a:mail.{domain} -all"
+```
+
 ## Script parameters
 
 `USER_NAME` – the user which will be used for everything in the script. Defaults to current user.
@@ -30,3 +43,5 @@ Sets up zsh, tmux
 
 1. Gets certificates via certbot
 2. Switches nginx configuration to use only secure versions of domains
+
+### Stage 5 – mail server setup
