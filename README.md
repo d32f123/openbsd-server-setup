@@ -52,4 +52,10 @@ Sets up zsh, tmux
 4. Prints DNS records that you should set up
 5. Local mail is forwarded to vmail directories (to be able to fetch them via IMAP)
 
+Optional, manual: set up a reverseDNS record at your VPS provider
+
+Required if using VPS: port 25 is required to receive mail. 
+If you're using VPS chances are it is blocked by default.
+You will have to contact your VPS provider to open port 25.
+
 ### Stage 6 – fail2ban setup

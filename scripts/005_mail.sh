@@ -9,17 +9,6 @@ doas [ ! -d "$CERT_DIR" ] && echo "Get an SSL certificate for $MAIL_DOMAIN first
 echo "Downloading dependencies for mail"
 doas pkg_add opensmtpd-extras opensmtpd-filter-senderscore opensmtpd-filter-rspamd opendkim dovecot dovecot-pigeonhole rspamd redis
 
-echo "Creating configuration at $MAIL_CONF"
-doas cp -f $MAIL_CONF/{smtpd.conf,smtpd.bak.conf}
-sed "s/{{base_domain}}/$DOMAIN_NAME/g; 
-     s/{{mail_domain}}/$MAIL_DOMAIN/g;" mail/smtpd.template.conf | doas tee $MAIL_CONF
-
-CREDENTIALS=$MAIL_CONF_DIR/credentials
-VIRTUALS=$MAIL_CONF_DIR/virtuals
-ALIASES=$MAIL_CONF_DIR/aliases
-
-echo "$MAIL_DOMAIN" | doas tee $MAIL_CONF/mailname
-
 echo "Creating vmail account"
 VMAIL_USER=vmail
 VMAIL_ROOT=/var/vmail
@@ -27,6 +16,18 @@ doas useradd -c "Virtual Mail Account" -d $VMAIL_ROOT -s /sbin/nologin -L staff 
 
 VMAIL_UID="$(id -ru $VMAIL_USER)"
 VMAIL_GID="$(id -rg $VMAIL_USER)"
+
+echo "Creating configuration at $MAIL_CONF"
+doas cp -f $MAIL_CONF/{smtpd.conf,smtpd.bak.conf}
+sed "s/{{base_domain}}/$DOMAIN_NAME/g; 
+     s/{{mail_domain}}/$MAIL_DOMAIN/g;
+     s/{{vmail_user}}/$VMAIL_USER/g;" mail/smtpd.template.conf | doas tee $MAIL_CONF
+
+CREDENTIALS=$MAIL_CONF_DIR/credentials
+VIRTUALS=$MAIL_CONF_DIR/virtuals
+ALIASES=$MAIL_CONF_DIR/aliases
+
+echo "$MAIL_DOMAIN" | doas tee $MAIL_CONF/mailname
 
 export CREDENTIALS VIRTUALS ALIASES VMAIL_USER VMAIL_UID VMAIL_GID VMAIL_ROOT
 
