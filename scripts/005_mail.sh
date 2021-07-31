@@ -18,6 +18,8 @@ CREDENTIALS=$MAIL_CONF_DIR/credentials
 VIRTUALS=$MAIL_CONF_DIR/virtuals
 ALIASES=$MAIL_CONF_DIR/aliases
 
+echo "$MAIL_DOMAIN" | doas tee $MAIL_CONF/mailname
+
 echo "Creating vmail account"
 VMAIL_USER=vmail
 VMAIL_ROOT=/var/vmail

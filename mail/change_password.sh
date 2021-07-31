@@ -17,3 +17,4 @@ doas grep "^$username@$DOMAIN_NAME" "$CREDENTIALS" >/dev/null || { echo "User no
 doas sed -i.bak -E "s?$username@$DOMAIN_NAME:[^:]+?$username@$DOMAIN_NAME:$encrypted_password?" "$CREDENTIALS" && echo "Password changed"
 
 doas rcctl reload dovecot
+doas smtpctl update table credentials

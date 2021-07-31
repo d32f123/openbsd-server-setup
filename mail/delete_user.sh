@@ -15,4 +15,5 @@ doas sed -i.bak -e "/$username@$DOMAIN_NAME/d" "$VIRTUALS"
 echo "User $username deleted"
 
 doas rcctl reload dovecot
-doas rcctl restart smtpd
+doas smtpctl update table credentials
+doas smtpctl update table virtuals

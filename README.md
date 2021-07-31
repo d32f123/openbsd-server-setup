@@ -45,3 +45,11 @@ Sets up zsh, tmux
 2. Switches nginx configuration to use only secure versions of domains
 
 ### Stage 5 – mail server setup
+
+1. Sets up smtpd, dovecot, rspamd, redis
+2. Creates a user account username@domainname
+3. There are scripts available to add, change password and to delete users
+4. Prints DNS records that you should set up
+5. Local mail is forwarded to vmail directories (to be able to fetch them via IMAP)
+
+### Stage 6 – fail2ban setup

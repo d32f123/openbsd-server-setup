@@ -19,4 +19,5 @@ echo "${username}@${DOMAIN_NAME}:${encrypted_password}:$VMAIL_USER:$VMAIL_UID:$V
 echo "${username}@${DOMAIN_NAME}: $VMAIL_USER" | doas tee -a "$VIRTUALS"
 
 doas rcctl reload dovecot
-doas rcctl restart smtpd
+doas smtpctl update table credentials
+doas smtpctl update table virtuals
