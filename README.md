@@ -4,7 +4,8 @@
 * Shell: zsh, oh-my-zsh, tmux
 * SSH
 * Web server – nginx with automatic http to https redirect and A+ SSL
-* Mail server – OpenSMTPD, Dovecot, Rspamd, RainLoop
+* Mail server – OpenSMTPD, Dovecot, Rspamd, Redis
+* Brute force protection: PF
 
 ## Prerequisites
 You will have to set up some DNS records prior to running this script.
@@ -58,4 +59,6 @@ Required if using VPS: port 25 is required to receive mail.
 If you're using VPS chances are it is blocked by default.
 You will have to contact your VPS provider to open port 25.
 
-### Stage 6 – fail2ban setup
+### Stage 6 – PF (packet filter) setup
+
+Sets up packet filter to block ips which spam your SSH, HTTP, HTTPS, IMAP, SMTP ports

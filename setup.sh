@@ -12,6 +12,7 @@ for arg in "$@"; do
         nginx) run_nginx=yes ;;
         ssl) run_ssl=yes ;;
         mail) run_mail=yes ;;
+        pf) run_pf=yes ;;
     esac
 done
 
@@ -43,5 +44,6 @@ SCRIPTS="$BASE/scripts"
 [ -n "$run_all" ] || [ -n "$run_bootstrap" ] && "$SCRIPTS/001_bootstrap.sh"
 [ -n "$run_all" ] || [ -n "$run_shell" ] && "$SCRIPTS/002_shell.sh"
 [ -n "$run_all" ] || [ -n "$run_nginx" ] && "$SCRIPTS/003_nginx.sh"
-[ -n "$run_all" ] || [ -n "$run_ssl" ] &&  "$SCRIPTS/004_ssl.sh"
-[ -n "$run_all" ] || [ -n "$run_mail" ] &&  "$SCRIPTS/005_mail.sh"
+[ -n "$run_all" ] || [ -n "$run_ssl" ] && "$SCRIPTS/004_ssl.sh"
+[ -n "$run_all" ] || [ -n "$run_mail" ] && "$SCRIPTS/005_mail.sh"
+[ -n "$run_all" ] || [ -n "$run_pf" ] && "$SCRIPTS/006_pf.sh"
