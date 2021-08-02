@@ -18,7 +18,7 @@ VMAIL_UID="$(id -ru $VMAIL_USER)"
 VMAIL_GID="$(id -rg $VMAIL_USER)"
 
 echo "Creating configuration at $MAIL_CONF"
-doas cp -f $MAIL_CONF/{smtpd.conf,smtpd.bak.conf}
+doas cp -f $MAIL_CONF_DIR/{smtpd.conf,smtpd.bak.conf}
 sed "s/{{base_domain}}/$DOMAIN_NAME/g; 
      s/{{mail_domain}}/$MAIL_DOMAIN/g;
      s/{{vmail_user}}/$VMAIL_USER/g;" mail/smtpd.template.conf | doas tee $MAIL_CONF
@@ -27,7 +27,7 @@ CREDENTIALS=$MAIL_CONF_DIR/credentials
 VIRTUALS=$MAIL_CONF_DIR/virtuals
 ALIASES=$MAIL_CONF_DIR/aliases
 
-echo "$MAIL_DOMAIN" | doas tee $MAIL_CONF/mailname
+echo "$MAIL_DOMAIN" | doas tee $MAIL_CONF_DIR/mailname
 
 export CREDENTIALS VIRTUALS ALIASES VMAIL_USER VMAIL_UID VMAIL_GID VMAIL_ROOT
 

@@ -10,3 +10,6 @@ doas pkg_add \
   nginx certbot \
   cmake gmake gcc g++ coreutils \
   base64
+
+doas rcctl enable slaacd
+doas rcctl start slaacd

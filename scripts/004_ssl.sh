@@ -17,7 +17,7 @@ fi
 
 echo "Getting SSL certificates, switching to secure sites"
 for site in $NGINX_DOMAINS; do
-    doas certbot certonly --webroot --agree-tos -m "$USER_NAME@$DOMAIN_NAME" -d "$site" -w $NGINX_WWW/$site
+    doas certbot certonly --webroot --agree-tos -m "$USER_NAME@$DOMAIN_NAME" -d "$site,www.$site" -w $NGINX_WWW/$site
     doas ln -s -f $NGINX_CONF/{sites-available,sites-enabled}/${site}.secure.site
     doas rm $NGINX_CONF/sites-enabled/${site}.insecure.site
 done
