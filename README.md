@@ -6,6 +6,7 @@
 * Web server – nginx with automatic http to https redirect and A+ SSL
 * Mail server – OpenSMTPD, Dovecot, Rspamd, Redis
 * Brute force protection: PF
+* VPN: OpenIKED, WireGuard, Unbound, PF
 
 ## Prerequisites
 You will have to set up some DNS records prior to running this script.
@@ -18,6 +19,11 @@ www.{domain}	300	IN	A	{ip}
 ;; DNS records for mail (will be output after stage 5)
 {domain}.	300	IN	MX	0 mail.{domain}. ;; so that people know which server serves mail for {domain}
 @      IN TXT  "v=spf1 mx a:mail.{domain} -all"
+```
+
+If you want to enable *IPv6*, then add this line to your /etc/hostname.*:
+```
+inet6 autoconf -autoconfprivacy -soii
 ```
 
 ## Script parameters
@@ -62,3 +68,15 @@ You will have to contact your VPS provider to open port 25.
 ### Stage 6 – PF (packet filter) setup
 
 Sets up packet filter to block ips which spam your SSH, HTTP, HTTPS, IMAP, SMTP ports
+
+### Stage 7 – VPN setup
+
+Sets up OpenIKED IKEv2 and WireGuard VPN.
+Ideas taken from EdgeWalker script https://github.com/fazalmajid/edgewalker
+
+By default, IKEv2 configuration is not set up.
+IKEv2 uses Preshared key authentication. WireGuard uses asymmetric key + Preshared Key authentication.
+
+New VPN configurations for new clients can be created via a script (WireGuard only).
+Configurations are made available at a random endpoint at vpn.{{domain}}/
+

@@ -9,7 +9,7 @@ doas pkg_add \
   vim zsh zsh-syntax-highlighting bash curl wget git pkglocatedb rsync \
   nginx certbot \
   cmake gmake gcc g++ coreutils \
-  base64
+  base64 libqrencode
 
 doas rcctl enable slaacd
 doas rcctl start slaacd

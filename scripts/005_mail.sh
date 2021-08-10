@@ -111,7 +111,7 @@ $dns_spf_record
 $dns_dmarc_record"
 
 
-echo "$dns_records" >dns_records.txt
+echo "$dns_records" >~/dns_records.txt
 
 doas mkdir -p /etc/rspamd/local.d
 sed "s/{{domain}}/$DOMAIN_NAME/g;
