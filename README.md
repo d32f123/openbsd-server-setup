@@ -26,6 +26,11 @@ If you want to enable *IPv6*, then add this line to your /etc/hostname.*:
 inet6 autoconf -autoconfprivacy -soii
 ```
 
+## Running
+```shell
+./setup.sh [stage]
+```
+
 ## Script parameters
 
 `USER_NAME` – the user which will be used for everything in the script. Defaults to current user.
