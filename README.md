@@ -21,6 +21,9 @@ www.{domain}	300	IN	A	{ip}
 @      IN TXT  "v=spf1 mx a:mail.{domain} -all"
 ```
 
+Instead of using wildcard (*.{domain}.) you can just set up these domains explicitly:
+vpn.{domain}, mail.{domain}, www.vpn.{domain}, www.mail.{domain}, www.{domain}, {domain}
+
 If you want to enable *IPv6*, then add this line to your /etc/hostname.*:
 ```
 inet6 autoconf -autoconfprivacy -soii
@@ -30,6 +33,8 @@ inet6 autoconf -autoconfprivacy -soii
 
 `USER_NAME` – the user which will be used for everything in the script. Defaults to current user.
 `DOMAIN_NAME` – the domain name to create websites for. Defaults to `$(hostname | cut -d. -f2-)`
+`MAIL_DOMAIN` – the domain name where mail server will be hosted. Defaults to `mail.$DOMAIN_NAME`
+`VPN_DOMAIN` – the domain name where VPNs will be hosted (including their configurations). Defaults to `vpn.$DOMAIN_NAME`
 
 ## Script stages
 

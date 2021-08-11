@@ -22,3 +22,11 @@
 }
 [ -z "$WG_PUBKEY" ] && WG_PUBKEY=$(doas ifconfig $WG_IF | grep wgpubkey | cut -d' ' -f2)
 [ -z "$WG_PORT" ] && WG_PORT=$(doas ifconfig $WG_IF | grep wgport | cut -d' ' -f2)
+
+# Colors
+RED="\033[0;31m"
+YELLOW="\033[0;33m"
+BOLD="\033[1m"
+PURPLE="\033[0;35m"
+GREEN="\033[0;32m"
+NORM="\033[0m"

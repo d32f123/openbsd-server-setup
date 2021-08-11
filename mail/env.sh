@@ -7,3 +7,11 @@
 [ -z "$VMAIL_ROOT" ] && VMAIL_ROOT=/var/vmail
 [ -z "$CREDENTIALS" ] && CREDENTIALS=/etc/mail/credentials
 [ -z "$VIRTUALS" ] && VIRTUALS=/etc/mail/virtuals
+
+# Colors
+RED="\033[0;31m"
+YELLOW="\033[0;33m"
+BOLD="\033[1m"
+PURPLE="\033[0;35m"
+NORM="\033[0m"
+GREEN="\033[0;32m"

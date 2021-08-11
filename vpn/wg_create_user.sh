@@ -6,12 +6,12 @@
 usage="Usage: wg_create_user.sh <username>"
 
 username="$1"
-[ -z "$username" ] && echo "$usage" && exit 1
+[ -z "$username" ] && echo "${RED}$usage${NORM}" && exit 1
 
 d="$(dirname $0)"
 
 . $d/env.sh
-echo "Creating user $username for $VPN_DOMAIN"
+echo "${YELLOW}Creating user $username for $VPN_DOMAIN${NORM}"
 
 www_secret="$(openssl rand -base64 32 | ghead -c 20)"
 key="$(openssl rand -base64 32)"
@@ -55,8 +55,10 @@ doas qrencode -o $WWW_SECRET_ROOT/wgclient.png -t PNG <$WWW_SECRET_ROOT/wgclient
 doas cp $d/wg_index.html $WWW_SECRET_ROOT/index.html
 doas chmod -R o-rwx $WWW_SECRET_ROOT
 
-echo "VPN Configuration created!
-Download it at https://$VPN_DOMAIN/$www_secret/
+echo "${GREEN}VPN Configuration created!
+${PURPLE}Download it at https://$VPN_DOMAIN/$www_secret/
 or use the QR code below:"
 
 qrencode -o - -t UTF8 "https://$VPN_DOMAIN/$www_secret/index.html"
+
+echo -n "${NORM}"

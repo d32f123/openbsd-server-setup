@@ -2,10 +2,10 @@
 
 ssh_port=$(grep -q -E "^Port [^#]+" /etc/ssh/sshd_config && sed -nE 's/^Port ([^#]+)/\1/p' /etc/ssh/sshd_config || echo ssh)
 
-echo "Protecting ssh ($ssh_port) from brute force attacks
+echo "${YELLOW}Protecting ssh ($ssh_port) from brute force attacks
 Protecting mail auth (submission) from brute force attacks
 Protecting imap (imaps) from brute force attacks
-Protecting HTTP and HTTPS (80, 443) from brute force attacks
+Protecting HTTP and HTTPS (80, 443) from brute force attacks${NORM}
 "
 
 pf_conf="
@@ -29,10 +29,10 @@ pass proto tcp from any to any port { www https } \\
 "
 
 PF_CONF=/etc/pf.conf
-echo "$pf_conf" | doas tee -a $PF_CONF
+echo "$pf_conf" | doas tee -a $PF_CONF >/dev/null
 
 doas rcctl enable pf
 
-echo "Creating a cron job to clear old bans daily"
+echo "${YELLOW}Creating a cron job to clear old bans daily${NORM}"
 CRONJOB="@daily pfctl -t bruteforce -T expire 86400"
 { doas crontab -l 2>/dev/null ; echo "$CRONJOB" ; } | doas crontab -
