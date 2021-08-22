@@ -78,20 +78,6 @@ doas rcctl restart unbound || {
 	exit 1
 }
 
-echo "${YELLOW}Configuring Packet Filter${NORM}"
-
-{ 
-	[ -n "$DO_IKEV2" ] && cat || sed -e '/ikev2/d' 
-} <vpn/pf.template.conf | sed -e "s/{{ikev2_if}}/$IKEV2_VPN_IF/g;
-s/{{wg_if}}/$WG_IF/g;
-s/{{main_if}}/$MAIN_IF/g;" | doas tee -a /etc/pf.conf >/dev/null
-
-echo "${YELLOW}Restarting Packet Filter${NORM}"
-doas pfctl -v -f /etc/pf.conf || {
-	echo "${RED}Failed to start pf with the new configuration${NORM}"
-	exit 1
-}
-
 if [ -n "$DO_IKEV2" ]; then
 	echo "${YELLOW}Configuring IKEv2 virtual interface $IKEV2_VPN_IF${NORM}"
 
@@ -128,6 +114,19 @@ doas sh /etc/netstart || {
 }
 WG_PUBKEY="$(doas ifconfig $WG_IF | grep wgpubkey | cut -d' ' -f2)"
 
+echo "${YELLOW}Configuring Packet Filter${NORM}"
+
+{ 
+	[ -n "$DO_IKEV2" ] && cat || sed -e '/ikev2/d' 
+} <vpn/pf.template.conf | sed -e "s/{{ikev2_if}}/$IKEV2_VPN_IF/g;
+s/{{wg_if}}/$WG_IF/g;
+s/{{main_if}}/$MAIN_IF/g;" | doas tee -a /etc/pf.conf >/dev/null
+
+echo "${YELLOW}Restarting Packet Filter${NORM}"
+doas pfctl -f /etc/pf.conf || {
+	echo "${RED}Failed to start pf with the new configuration${NORM}"
+	exit 1
+}
 
 echo "${YELLOW}Creating a default user for WireGuard VPN${NORM}"
 export MAIN_IF MAIN_IP MAIN_IP6 WG_IF WG_NET WG_NET6 WG_PUBKEY WG_PORT

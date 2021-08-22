@@ -6,13 +6,17 @@ NGINX_WWW=/var/www
 NGINX_USER=www
 NGINX_GROUP=www
 
-if [ ! -f /etc/ssl/certs/dh.pem ]
+if [ ! -f /etc/ssl/certs/dh.pem ] && [ -n "$DO_DH_PARAMS" ]
 then
     echo "${YELLOW}Generating DH, please wait a few minutes${NORM}"
     doas mkdir -p /etc/ssl/certs
     cd /etc/ssl/certs
     doas openssl dhparam -out dh.pem 4096
     cd -
+elif [ -z "$DO_DH_PARAMS" ]
+then
+    echo "${YELLOW}Disabling custom DH params${NORM}"
+    doas sed -i.bak -E -e 's/(^ssl_dhparam .*$)/# \1/' $NGINX_CONF/secure
 fi
 
 echo "${YELLOW}Getting SSL certificates, switching to secure sites${NORM}"

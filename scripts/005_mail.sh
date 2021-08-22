@@ -14,7 +14,7 @@ doas useradd -c "Virtual Mail Account" -d $VMAIL_ROOT -s /sbin/nologin -L staff 
 VMAIL_UID="$(id -ru $VMAIL_USER)"
 VMAIL_GID="$(id -rg $VMAIL_USER)"
 
-echo "${YELLOW}Configuring $MAIL_CONF${NORM}"
+echo "${YELLOW}Configuring smtpd $MAIL_CONF${NORM}"
 doas cp -f $MAIL_CONF_DIR/{smtpd.conf,smtpd.bak.conf}
 sed "s/{{base_domain}}/$DOMAIN_NAME/g; 
      s/{{mail_domain}}/$MAIL_DOMAIN/g;
@@ -36,6 +36,21 @@ done
 
 doas mkdir $VMAIL_ROOT
 doas chown $VMAIL_USER:$VMAIL_USER $VMAIL_ROOT
+
+echo "${YELLOW}Making a specialized login group for dovecot${NORM}"
+echo "dovecot:\\
+    :openfiles-cur=1024:\\
+    :openfiles-max=2048:\\
+    :tc=daemon:" | doas tee -a /etc/login.conf >/dev/null
+doas usermod -L dovecot _dovecot
+doas cap_mkdb /etc/login.conf # update login.conf db
+
+# Disable ssl file since we already put ssl info in local.conf
+doas mv /etc/dovecot/conf.d/10-ssl.conf /etc/dovecot/conf.d/10-ssl.conf.disabled
+doas rcctl restart dovecot || doas rcctl restart dovecot || doas rcctl restart dovecot || {
+    echo "${RED}Dovecot failed to start${NORM}"
+    exit 1
+}
 
 echo "${YELLOW}Creating virtual user $USER_NAME${NORM}"
 mail/create_user.sh $USER_NAME || {
@@ -64,11 +79,6 @@ doas rcctl restart smtpd || {
 
 echo "${YELLOW}Configuring Dovecot${NORM}"
 
-echo "dovecot:\\
-    :openfiles-cur=1024:\\
-    :openfiles-max=2048:\\
-    :tc=daemon:" | doas tee -a /etc/login.conf >/dev/null
-
 SIEVE_ROOT=/usr/local/lib/dovecot/sieve
 spam_script=$SIEVE_ROOT/report-spam.sieve
 ham_script=$SIEVE_ROOT/report-ham.sieve
@@ -90,9 +100,6 @@ doas sievec $spam_script
 
 doas cp mail/sa-learn-ham.sh mail/sa-learn-spam.sh $SIEVE_ROOT
 doas chown root:bin $SIEVE_ROOT/sa-learn-ham.sh $SIEVE_ROOT/sa-learn-spam.sh
-
-# Disable ssl file since we already put ssl info in local.conf
-doas mv /etc/dovecot/conf.d/10-ssl.conf /etc/dovecot/conf.d/10-ssl.conf.disabled
 
 echo "${YELLOW}Restarting dovecot service${NORM}"
 doas rcctl enable dovecot

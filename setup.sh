@@ -39,15 +39,9 @@ export RED YELLOW BOLD PURPLE GREEN NORM
 # ----
 [ -z "$USER_NAME" ] && prompt_user "Which user should become the main user?" "$(whoami)" USER_NAME
 [ -z "$DOMAIN_NAME" ] && prompt_user "Please enter the domain name of your server." "$(hostname | cut -d. -f2-)" DOMAIN_NAME
-echo "${YELLOW}Using ${USER_NAME} as main username"
-echo "${YELLOW}Using ${DOMAIN_NAME} as domain name"
-export USER_NAME; export DOMAIN_NAME
-
 [ -z "$MAIN_DOMAIN" ] && prompt_user "Mail domain:" "mail.$DOMAIN_NAME" MAIL_DOMAIN
-export MAIL_DOMAIN
-
 [ -z "$VPN_DOMAIN" ] && prompt_user "VPN domain:" "vpn.$DOMAIN_NAME" VPN_DOMAIN
-export VPN_DOMAIN
+export USER_NAME DOMAIN_NAME MAIL_DOMAIN VPN_DOMAIN
 
 NGINX_DOMAINS="$DOMAIN_NAME $MAIL_DOMAIN $VPN_DOMAIN"
 echo "${YELLOW}Will setup these domains: $NGINX_DOMAINS"
@@ -59,7 +53,12 @@ SCRIPTS="$BASE/scripts"
 [ -n "$run_all" ] || [ -n "$run_bootstrap" ] && { "$SCRIPTS/001_bootstrap.sh" || exit 1 ; }
 [ -n "$run_all" ] || [ -n "$run_shell" ] && { "$SCRIPTS/002_shell.sh" || exit 1 ; }
 [ -n "$run_all" ] || [ -n "$run_nginx" ] && { "$SCRIPTS/003_nginx.sh" || exit 1 ; }
-[ -n "$run_all" ] || [ -n "$run_ssl" ] && { "$SCRIPTS/004_ssl.sh" || exit 1 ; }
+[ -n "$run_all" ] || [ -n "$run_ssl" ] && { 
+    prompt_user "Generate custom DH params for SSL? It will take about 10 minutes (yes/no)" "no" DO_DH_PARAMS
+    [ "$DO_DH_PARAMS" = "yes" ] || unset DO_DH_PARAMS
+    export DO_DH_PARAMS
+    "$SCRIPTS/004_ssl.sh" || exit 1
+}
 [ -n "$run_all" ] || [ -n "$run_mail" ] && { "$SCRIPTS/005_mail.sh" || exit 1 ; }
 [ -n "$run_all" ] || [ -n "$run_pf" ] && { "$SCRIPTS/006_pf.sh" || exit 1 ; }
 [ -n "$run_all" ] || [ -n "$run_vpn" ] && { 
