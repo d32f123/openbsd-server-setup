@@ -31,5 +31,5 @@ doas /etc/rc.d/nginx reload || {
 }
 
 echo "${YELLOW}Creating a cron job to update certificates weekly${NORM}"
-CRONJOB="@weekly $(which certbot) renew --quiet --force-renewal --post-hook '/etc/rc.d/nginx reload'"
+CRONJOB="@monthly $(which certbot) renew --quiet --force-renewal --post-hook '/etc/rc.d/nginx reload'"
 { doas crontab -l 2>/dev/null ; echo "$CRONJOB" ; } | doas crontab -
