@@ -87,7 +87,7 @@ up" | doas tee /etc/hostname.$IKEV2_VPN_IF >/dev/null
 	doas sh /etc/netstart
 
 	echo "${PURPLE}Enter password for IKEv2 VPN: ${NORM}\c" >/dev/tty ; stty -echo ; read password ; stty echo ; echo >/dev/tty ; 
-	sed -e "s?{{ikev2_net6}}?$IKEV2_VPN_NET6/g;
+	sed -e "s?{{ikev2_net6}}?$IKEV2_VPN_NET6?g;
 s?{{ikev2_net}}?$IKEV2_VPN_NET?g;
 s/{{main_if}}/$MAIN_IF/g;
 s?{{password}}?$password?g;" vpn/iked.template.conf | doas tee $IKED_CONF >/dev/null
