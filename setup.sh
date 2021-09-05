@@ -61,7 +61,7 @@ SCRIPTS="$BASE/scripts"
 }
 [ -n "$run_all" ] || [ -n "$run_mail" ] && { 
     prompt_user "Install RainLoop WebMail? (yes/no)" "yes" DO_RAINLOOP
-    [ "$DO_RAINLOOP" = "yes"] || unset DO_RAINLOOP
+    [ "$DO_RAINLOOP" = "yes" ] || unset DO_RAINLOOP
     export DO_RAINLOOP
     "$SCRIPTS/005_mail.sh" || exit 1
 }

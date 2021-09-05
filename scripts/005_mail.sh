@@ -158,7 +158,9 @@ if [ -n "$DO_RAINLOOP" ]; then
     doas chown -R www:www /var/www/$MAIL_DOMAIN
 
     echo "${YELLOW}Modifying NGINX configuration for $MAIL_DOMAIN${NORM}"
-    doas sed -i.pre_rainloop '/include secure;/a\
+    doas sed -i.pre_rainloop '
+    s/index.html/index.php/;
+    /include secure;/a\
     client_max_body_size 25M;\
 \
     location ^~ /data {\
@@ -167,13 +169,13 @@ if [ -n "$DO_RAINLOOP" ]; then
 \
     location ~ [^/]\.php(/|$) {\
         include fastcgi_params;\
-        try_files $uri $uri/ =404;
+        try_files $uri $uri/ =404;\
         fastcgi_split_path_info ^(.+?\.php)(/.*)$;\
         if (!-f $document_root$fastcgi_script_name) {\
             return 404;\
         }\
         fastcgi_param HTTP_PROXY "";\
-        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;\
         fastcgi_index index.php;\
         fastcgi_pass unix:run/php-fpm.sock;\
     }\
@@ -194,7 +196,7 @@ if [ -n "$DO_RAINLOOP" ]; then
 
     # This is to generate the RainLoop directories
     wget -O /dev/null $MAIL_DOMAIN
-    RAINLOOP_ROOT=var/www/$MAIL_DOMAIN/data/_data_/_default_
+    RAINLOOP_ROOT=/var/www/$MAIL_DOMAIN/data/_data_/_default_
 
     doas sed -e "s/{{domain}}/$DOMAIN_NAME/;" mail/application.template.ini | doas tee $RAINLOOP_ROOT/configs/application.ini >/dev/null
     doas chown www:www $RAINLOOP_ROOT/configs/application.ini
