@@ -122,8 +122,15 @@ dns_spf_record="@ TXT v=spf1 mx a:$MAIL_DOMAIN -all"
 dns_dmarc_record="_dmarc.$DOMAIN_NAME TXT v=DMARC1; p=reject; rua=mailto:postmaster@$DOMAIN_NAME;"
 dns_records="$dns_dkim_record
 $dns_spf_record
-$dns_dmarc_record"
-
+$dns_dmarc_record
+_imap._tcp.$DOMAIN_NAME.	300	IN	SRV	0 0 0 .
+_imaps._tcp.$DOMAIN_NAME.	300	IN	SRV	10 1 993 $MAIL_DOMAIN.
+_pop3._tcp.$DOMAIN_NAME.	300	IN	SRV	0 0 0 .
+_pop3s._tcp.$DOMAIN_NAME.	300	IN	SRV	0 0 0 .
+_submission._tcp.$DOMAIN_NAME.	300	IN	SRV	20 1 587 $MAIL_DOMAIN.
+_submission._tcp.$DOMAIN_NAME.	300	IN	SRV	30 1 25 $MAIL_DOMAIN.
+_submissions._tcp.$DOMAIN_NAME.	300	IN	SRV	10 1 465 $MAIL_DOMAIN.
+"
 
 echo "$dns_records" >~/dns_records.txt
 
@@ -138,6 +145,66 @@ doas rcctl start redis rspamd || {
     echo "${RED}Failed to restart rspamd${NORM}"
     exit 1
 }
+
+if [ -n "$DO_RAINLOOP" ]; then
+    echo "${YELLOW}Installing RainLoop${NORM}"
+    doas pkg_add php php-curl php-pdo_sqlite php-zip zip unzip
+    cd $(mktemp -d)
+    wget https://www.rainloop.net/repository/webmail/rainloop-latest.zip
+    doas unzip rainloop-latest.zip -d /var/www/$MAIL_DOMAIN/
+    cd -
+    doas find /var/www/$MAIL_DOMAIN -type d -exec chmod 755 {} \;
+    doas find /var/www/$MAIL_DOMAIN -type f -exec chmod 644 {} \;
+    doas chown -R www:www /var/www/$MAIL_DOMAIN
+
+    echo "${YELLOW}Modifying NGINX configuration for $MAIL_DOMAIN${NORM}"
+    doas sed -i.pre_rainloop '/include secure;/a\
+    client_max_body_size 25M;\
+\
+    location ^~ /data {\
+        deny all;\
+    }\
+\
+    location ~ [^/]\.php(/|$) {\
+        include fastcgi_params;\
+        try_files $uri $uri/ =404;
+        fastcgi_split_path_info ^(.+?\.php)(/.*)$;\
+        if (!-f $document_root$fastcgi_script_name) {\
+            return 404;\
+        }\
+        fastcgi_param HTTP_PROXY "";\
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_index index.php;\
+        fastcgi_pass unix:run/php-fpm.sock;\
+    }\
+' /etc/nginx/sites-available/$MAIL_DOMAIN.secure.site
+    doas nginx -s reload
+
+    echo "${YELLOW}Configuring RainLoop${NORM}"
+    PHP_VERSION=$(ls -d /etc/php-*.sample | head -1 | sed -E 's/.*php-(.*)\.sample/\1/')
+    doas sed -i.bak -e 's/upload_max_filesize =.*$/upload_max_filesize = 25M/;
+    s/post_max_size =.*$/post_max_size = 29M/;' /etc/php-$PHP_VERSION.ini
+    doas cp /etc/php-$PHP_VERSION.sample/* /etc/php-$PHP_VERSION/.
+
+    FPM_SERVICE=$(rcctl ls all | grep 'php.*_fpm' | head -1)
+    doas rcctl enable $FPM_SERVICE
+    doas rcctl start $FPM_SERVICE
+    doas mkdir /var/www/etc
+    doas ln /etc/resolv.conf /var/www/etc/resolv.conf
+
+    # This is to generate the RainLoop directories
+    wget -O /dev/null $MAIL_DOMAIN
+    RAINLOOP_ROOT=var/www/$MAIL_DOMAIN/data/_data_/_default_
+
+    doas sed -e "s/{{domain}}/$DOMAIN_NAME/;" mail/application.template.ini | doas tee $RAINLOOP_ROOT/configs/application.ini >/dev/null
+    doas chown www:www $RAINLOOP_ROOT/configs/application.ini
+
+    doas sed -e "s/{{mail_domain}}/$MAIL_DOMAIN/" mail/domain.template.ini | doas tee $RAINLOOP_ROOT/domains/$DOMAIN_NAME.ini >/dev/null
+    doas chown www:www $RAINLOOP_ROOT/domains/$DOMAIN_NAME.ini
+
+    echo "${BOLD}${PURPLE}RainLoop is available at: https://$MAIL_DOMAIN/"
+fi
+
 
 echo "${BOLD}${PURPLE}----MAIL CONFIGURATION DONE----"
 echo "${BOLD}${PURPLE}Now place these entries in your DNS records:

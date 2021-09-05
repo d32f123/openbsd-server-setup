@@ -4,7 +4,7 @@
 * Shell: zsh, oh-my-zsh, tmux
 * SSH
 * Web server – nginx with automatic http to https redirect and A+ SSL
-* Mail server – OpenSMTPD, Dovecot, Rspamd, Redis
+* Mail server – OpenSMTPD, Dovecot, Rspamd, Redis, RainLoop (+PHP, optional)
 * Brute force protection: PF
 * VPN: OpenIKED, WireGuard, Unbound, PF
 
@@ -68,6 +68,8 @@ Sets up zsh, tmux
 3. There are scripts available to add, change password and to delete users
 4. Prints DNS records that you should set up
 5. Local mail is forwarded to vmail directories (to be able to fetch them via IMAP)
+
+Optional: set up RainLoop web frontend
 
 Optional, manual: set up a reverseDNS record at your VPS provider
 

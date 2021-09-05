@@ -59,7 +59,12 @@ SCRIPTS="$BASE/scripts"
     export DO_DH_PARAMS
     "$SCRIPTS/004_ssl.sh" || exit 1
 }
-[ -n "$run_all" ] || [ -n "$run_mail" ] && { "$SCRIPTS/005_mail.sh" || exit 1 ; }
+[ -n "$run_all" ] || [ -n "$run_mail" ] && { 
+    prompt_user "Install RainLoop WebMail? (yes/no)" "yes" DO_RAINLOOP
+    [ "$DO_RAINLOOP" = "yes"] || unset DO_RAINLOOP
+    export DO_RAINLOOP
+    "$SCRIPTS/005_mail.sh" || exit 1
+}
 [ -n "$run_all" ] || [ -n "$run_pf" ] && { "$SCRIPTS/006_pf.sh" || exit 1 ; }
 [ -n "$run_all" ] || [ -n "$run_vpn" ] && { 
     prompt_user "Set up IKEv2? It is less secure than WireGuard (yes/no)" "no" DO_IKEV2
