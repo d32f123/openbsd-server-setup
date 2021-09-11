@@ -57,6 +57,11 @@ SCRIPTS="$BASE/scripts"
     prompt_user "Generate custom DH params for SSL? It will take about 10 minutes (yes/no)" "no" DO_DH_PARAMS
     [ "$DO_DH_PARAMS" = "yes" ] || unset DO_DH_PARAMS
     export DO_DH_PARAMS
+
+    prompt_user "Enable HSTS preload? Read more at https://hstspreload.org/ (yes/no)" "no" DO_HSTS_PRELOAD
+    [ "$DO_HSTS_PRELOAD" = "yes" ] || unset DO_HSTS_PRELOAD
+    export DO_HSTS_PRELOAD
+
     "$SCRIPTS/004_ssl.sh" || exit 1
 }
 [ -n "$run_all" ] || [ -n "$run_mail" ] && { 

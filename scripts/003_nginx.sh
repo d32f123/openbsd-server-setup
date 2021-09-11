@@ -29,9 +29,10 @@ for site in $NGINX_DOMAINS; do
     doas ln -s -f $NGINX_CONF/{sites-available,sites-enabled}/${site}.insecure.site
 done
 
-echo "${YELLOW}Generating prompt for site $DOMAIN_NAME${NORM}"
-SITE_PROMPT="<html><body>Hello there! Edit me at $NGINX_WWW/$DOMAIN_NAME/index.html</body></html>"
-echo "$SITE_PROMPT" | doas tee $NGINX_WWW/$DOMAIN_NAME/index.html >/dev/null
+echo "${YELLOW}Generating index.html for site $DOMAIN_NAME${NORM}"
+sed -e "s/{{title}}/$DOMAIN_NAME/;
+        s?{{stub}}?Hello there! Edit me at $NGINX_WWW/$DOMAIN_NAME/index.html?;
+" nginx/site-templates/index.html | doas tee $NGINX_WWW/$DOMAIN_NAME/index.html >/dev/null
 
 echo "${YELLOW}Reloading nginx with sites' configurations${NORM}"
 doas /etc/rc.d/nginx restart || {

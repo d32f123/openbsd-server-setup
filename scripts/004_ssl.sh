@@ -19,6 +19,12 @@ then
     doas sed -i.bak -E -e 's/(^ssl_dhparam .*$)/# \1/' $NGINX_CONF/secure
 fi
 
+if [ -n "$DO_HSTS_PRELOAD" ]
+then
+    echo "${YELLOW}Enabling HSTS Preloading${NORM}"
+    doas sed -i.bak -e 's/includeSubDomains"/includeSubDomains; preload"/' $NGINX_CONF/secure
+fi
+
 echo "${YELLOW}Getting SSL certificates, switching to secure sites${NORM}"
 for site in $NGINX_DOMAINS; do
     doas certbot certonly --webroot --agree-tos -m "$USER_NAME@$DOMAIN_NAME" -d "$site,www.$site" -w $NGINX_WWW/$site
