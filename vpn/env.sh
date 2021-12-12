@@ -4,8 +4,8 @@
 [ -z "$VPN_DOMAIN" ] && VPN_DOMAIN="vpn.$DOMAIN_NAME"
 
 [ -z "$MAIN_IF" ] && MAIN_IF="$(ls /etc/hostname.* | grep -v enc | grep -v wg | head -1 | cut -d. -f 2)"
-[ -z "$MAIN_IP" ] && MAIN_IP="$(ifconfig $MAIN_IF | grep inet | grep -v inet6 | cut -d' ' -f2)"
-[ -z "$MAIN_IP6" ] && MAIN_IP6="$(ifconfig $MAIN_IF | grep inet6 | grep -v '%' | cut -d' ' -f2)"
+[ -z "$MAIN_IP" ] && MAIN_IP="$(ifconfig $MAIN_IF | grep inet | grep -v inet6 | head -1 | cut -d' ' -f2)"
+[ -z "$MAIN_IP6" ] && MAIN_IP6="$(ifconfig $MAIN_IF | grep inet6 | grep -v '%' | head -1 | cut -d' ' -f2)"
 
 [ -z "$WG_IF" ] && WG_IF=wg0
 [ -z "$WG_NET" ] && {

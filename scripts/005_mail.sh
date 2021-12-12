@@ -31,8 +31,8 @@ export CREDENTIALS VIRTUALS ALIASES VMAIL_USER VMAIL_UID VMAIL_GID VMAIL_ROOT
 for f in $CREDENTIALS $VIRTUALS $ALIASES; do
     doas touch $f
     doas chmod 0440 $f
-    doas chown _smtpd:_dovecot $f
 done
+doas chown _smtpd:_dovecot $CREDENTIALS
 
 doas mkdir $VMAIL_ROOT
 doas chown $VMAIL_USER:$VMAIL_USER $VMAIL_ROOT
@@ -66,6 +66,7 @@ for aliass in $main_user_mail_aliases; do
         root|hostmaster|webmaster) echo "$aliass: $USER_NAME" | doas tee -a "$ALIASES" >/dev/null ;;
     esac
 done
+echo "$USER_NAME: $USER_NAME@$DOMAIN_NAME" | doas tee -a "$ALIASES" >/dev/null
 doas newaliases
 
 # TODO: Prompt to add additional virtual users
@@ -131,6 +132,7 @@ _submission._tcp.$DOMAIN_NAME.	300	IN	SRV	20 1 587 $MAIL_DOMAIN.
 _submission._tcp.$DOMAIN_NAME.	300	IN	SRV	30 1 25 $MAIL_DOMAIN.
 _submissions._tcp.$DOMAIN_NAME.	300	IN	SRV	10 1 465 $MAIL_DOMAIN.
 "
+# TODO: Add a cronjob to rotate dkim keys every 3 months
 
 echo "$dns_records" >~/dns_records.txt
 

@@ -19,12 +19,12 @@ pass proto tcp from any to any port $ssh_port \\
 
 pass proto tcp from any to any port { submission imaps } \\
         flags S/SA keep state \\
-        (max-src-conn 5, max-src-conn-rate 15/3, \\
+        (max-src-conn 30, max-src-conn-rate 100/3, \\
         overload <bruteforce> flush global)
 
 pass proto tcp from any to any port { www https } \\
         flags S/SA keep state \\
-        (max-src-conn 20, max-src-conn-rate 40/3, \\
+        (max-src-conn 100, max-src-conn-rate 100/1, \\
         overload <bruteforce> flush global)
 "
 
