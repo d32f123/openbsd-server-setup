@@ -14,30 +14,22 @@ d="$(dirname $0)"
 echo "${YELLOW}Creating user $username for $VPN_DOMAIN${NORM}"
 
 www_secret="$(openssl rand -base64 32 | ghead -c 20)"
-key="$(openssl rand -base64 32)"
-psk=$(openssl rand -base64 32)
+key="$(wg genkey)"
+psk="$(wg genpsk)"
+pubkey="$(echo $key | wg pubkey)"
 
-# Set up a temporary interface wg9 to get the public key (hopefully it is not configured since it will be destroyed)
-temp_if=wg9
-temp_port=51821
-temp_addr=10.2.134.134
-doas ifconfig $temp_if wgport $temp_port wgkey "$key"
-
-pubkey="$(doas ifconfig $temp_if | grep wgpubkey | cut -d' ' -f2)"
-doas ifconfig $temp_if destroy
-
-peers=$(doas ifconfig $WG_IF | grep wgpeer | wc -l)
+peers=$(doas wg show $WG_IF peers | wc -l)
 my_suffix=$(($peers + 1))
 base="$(echo $WG_NET | sed -Ee 's?^.*\.([^.]+)/.*$?\1?')"
 base6="$(echo $WG_NET6 | sed -Ee 's/^.*:([^ /]+) .*$/\1/')"
 my_base=$(($base + $my_suffix))
 my_base6="$(printf '%x' $(($base6 + $my_suffix)))"
 
-my_ip=$(echo $WG_NET | sed -E "s?^(.*\\.)([^.]+)(/.*)\$?\\1$my_base\\3?")
-my_ip6=$(echo $WG_NET6 | sed -E "s?^(.*:)([^ /]+) (.*)\$?\\1$my_base6/\\3?")
+my_ip=$(echo $WG_NET | sed -E "s?^(.*\\.)([^.]+)/.*\$?\\1$my_base/32?")
+my_ip6=$(echo $WG_NET6 | sed -E "s?^(.*:)([^ /]+) .*\$?\\1$my_base6/128?")
 
-echo "wgpeer $pubkey wgaip 0.0.0.0/0 wgaip ::/0 wgpsk $psk # user: $username" | doas tee -a /etc/hostname.$WG_IF >/dev/null
-doas ifconfig $WG_IF wgpeer "$pubkey" wgaip 0.0.0.0/0 wgaip ::/0 wgpsk "$psk"
+echo "wgpeer $pubkey wgaip $my_ip wgaip $my_ip6 wgpsk $psk # user: $username" | doas tee -a /etc/hostname.$WG_IF >/dev/null
+doas ifconfig $WG_IF wgpeer "$pubkey" wgaip "$my_ip" wgaip "$my_ip6" wgpsk "$psk"
 
 WWW_SECRET_ROOT=/var/www/$VPN_DOMAIN/$www_secret
 doas mkdir -p $WWW_SECRET_ROOT
