@@ -63,12 +63,20 @@ WG_NET=10.2.0.1/16
 WG_NET6="fc00:dead:beef:1000::1 52"
 
 N_THREADS=$(doas sysctl | grep hw.ncpu= | cut -d= -f2)
-sed -e "s/{{n_threads}}/$N_THREADS/g;
+
+UNBOUND_SED_EXPR="s/{{n_threads}}/$N_THREADS/g;
 s/{{main_if}}/$MAIN_IF/g;
 s/{{main_ip}}/$MAIN_IP/g;
+s?{{vpn_net}}?$BASE_VPN_NET?g;"
+[ -n "$MAIN_IP6" ] && {
+	UNBOUND_SED_EXPR="$UNBOUND_SED_EXPR
 s?{{main_ipv6}}?$MAIN_IP6?g;
-s?{{vpn_net}}?$BASE_VPN_NET?g;
-s?{{vpn_net6}}?$BASE_VPN_NET6?g;" vpn/unbound.template.conf | doas tee $UNBOUND_CONF >/dev/null
+s?{{vpn_net6}}?$BASE_VPN_NET6?g;"
+} || {
+	UNBOUND_SED_EXPR="$UNBOUND_SED_EXPR
+/# IPv6/d;" # Remove lines ending with "# IPv6" since IPv6 is not enabled on this server
+}
+sed -e "$UNBOUND_SED_EXPR" vpn/unbound.template.conf | doas tee $UNBOUND_CONF >/dev/null
 
 echo "${YELLOW}Enabling and starting Unbound DNS server${NORM}"
 doas chown $UNBOUND_USER:$UNBOUND_GROUP $UNBOUND_ROOT
@@ -103,8 +111,8 @@ s?{{password}}?$password?g;" vpn/iked.template.conf | doas tee $IKED_CONF >/dev/
 fi
 
 echo "${YELLOW}Configuring WireGuard VPN interface $WG_IF${NORM}"
-echo "$WG_NET wgport $WG_PORT wgkey $(openssl rand -base64 32)
-inet6 $WG_NET6" | doas tee /etc/hostname.$WG_IF >/dev/null
+echo "$WG_NET wgport $WG_PORT wgkey $(openssl rand -base64 32)" | doas tee /etc/hostname.$WG_IF >/dev/null
+[ -n "$MAIN_IP6" ] && echo "inet6 $WG_NET6" | doas tee /etc/hostname.$WG_IF >/dev/null
 doas chmod 600 /etc/hostname.$WG_IF
 
 echo "${YELLOW}Restarting machine networking${NORM}"
@@ -116,9 +124,9 @@ WG_PUBKEY="$(doas ifconfig $WG_IF | grep wgpubkey | cut -d' ' -f2)"
 
 echo "${YELLOW}Configuring Packet Filter${NORM}"
 
-{ 
-	[ -n "$DO_IKEV2" ] && cat || sed -e '/ikev2/d' 
-} <vpn/pf.template.conf | sed -e "s/{{ikev2_if}}/$IKEV2_VPN_IF/g;
+{ [ -n "$DO_IKEV2" ] && cat || sed -e '/ikev2/d' ; } <vpn/pf.template.conf | \
+   { [ -n "$MAIN_IP6" ] && cat || sed -e '/ # IPv6/d' ; } | \
+   sed -e "s/{{ikev2_if}}/$IKEV2_VPN_IF/g;
 s/{{wg_if}}/$WG_IF/g;
 s/{{main_if}}/$MAIN_IF/g;" | doas tee -a /etc/pf.conf >/dev/null
 

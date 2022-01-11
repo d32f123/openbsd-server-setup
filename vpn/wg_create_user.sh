@@ -28,20 +28,32 @@ my_base6="$(printf '%x' $(($base6 + $my_suffix)))"
 my_ip=$(echo $WG_NET | sed -E "s?^(.*\\.)([^.]+)/.*\$?\\1$my_base/32?")
 my_ip6=$(echo $WG_NET6 | sed -E "s?^(.*:)([^ /]+) .*\$?\\1$my_base6/128?")
 
-echo "wgpeer $pubkey wgaip $my_ip wgaip $my_ip6 wgpsk $psk # user: $username" | doas tee -a /etc/hostname.$WG_IF >/dev/null
-doas ifconfig $WG_IF wgpeer "$pubkey" wgaip "$my_ip" wgaip "$my_ip6" wgpsk "$psk"
+IFCONFIG_WGAIPS="wgaip $my_ip"
+[ -n "$MAIN_IP6" ] && IFCONFIG_WGAIPS="$IFCONFIG_WGAIPS wgaip $my_ip6"
+echo "wgpeer $pubkey $IFCONFIG_WGAIPS wgpsk $psk # user: $username" | doas tee -a /etc/hostname.$WG_IF >/dev/null
+doas ifconfig $WG_IF wgpeer "$pubkey" $IFCONFIG_WGAIPS wgpsk "$psk"
 
 WWW_SECRET_ROOT=/var/www/$VPN_DOMAIN/$www_secret
 doas mkdir -p $WWW_SECRET_ROOT
-sed -e "s?{{privkey}}?$key?g;
+WGCLIENT_SED_EXPR="s?{{privkey}}?$key?g;
 s?{{my_ip}}?$my_ip?g;
-s?{{my_ip6}}?$my_ip6?g;
 s?{{host_ip}}?$MAIN_IP?g;
-s?{{host_ip6}}?$MAIN_IP6?g;
 s?{{hostpubkey}}?$WG_PUBKEY?g;
 s?{{psk}}?$psk?g;
 s?{{domain}}?$VPN_DOMAIN?g;
-s?{{port}}?$WG_PORT?g;" $d/wgclient.template.conf | doas tee $WWW_SECRET_ROOT/wgclient.conf >/dev/null
+s?{{port}}?$WG_PORT?g;"
+[ -n "$MAIN_IP6" ] && {
+    WGCLIENT_SED_EXPR="$WGCLIENT_SED_EXPR
+s?{{my_ip6}}?$my_ip6?g;
+s?{{host_ip6}}?$MAIN_IP6?g;
+s/ # IPv6.*$//g;
+"
+} || {
+    WGCLIENT_SED_EXPR="$WGCLIENT_SED_EXPR
+/ # IPv6/ s/^.*$//;
+"
+}
+sed -e "$WGCLIENT_SED_EXPR" $d/wgclient.template.conf | sed -e '/<NEWLINE>$/ {s/<NEWLINE>//; N; s/\n/ /; }' | doas tee $WWW_SECRET_ROOT/wgclient.conf >/dev/null
 
 doas qrencode -o $WWW_SECRET_ROOT/wgclient.png -t PNG <$WWW_SECRET_ROOT/wgclient.conf
 doas cp $d/wg_index.html $WWW_SECRET_ROOT/index.html

@@ -1,11 +1,14 @@
 #!/bin/sh
 
-# Usage: ./setup.sh [bootstrap] [shell] [nginx] [ssl] [mail] [pf] [vpn]
+# Usage: ./setup.sh [bootstrap] [shell] [nginx] [ssl [--ssl-test]] [mail] [pf] [vpn]
 #   By default runs all
 
 run_all=yes
-[ -z "$*" ] || unset run_all
 for arg in "$@"; do
+    case "$arg" in
+        --ssl-test) ssl_test=yes ; continue ;;
+    esac
+    unset run_all
     case "$arg" in
         bootstrap) run_bootstrap=yes ;;
         shell) run_shell=yes ;;
@@ -53,7 +56,8 @@ SCRIPTS="$BASE/scripts"
 [ -n "$run_all" ] || [ -n "$run_bootstrap" ] && { "$SCRIPTS/001_bootstrap.sh" || exit 1 ; }
 [ -n "$run_all" ] || [ -n "$run_shell" ] && { "$SCRIPTS/002_shell.sh" || exit 1 ; }
 [ -n "$run_all" ] || [ -n "$run_nginx" ] && { "$SCRIPTS/003_nginx.sh" || exit 1 ; }
-[ -n "$run_all" ] || [ -n "$run_ssl" ] && { 
+[ -n "$run_all" ] || [ -n "$run_ssl" ] && {
+    [ -n "$ssl_test" ] && export CERTBOT_FLAGS="--server https://{{local}}:14000/dir --no-verify-ssl"
     prompt_user "Generate custom DH params for SSL? It will take about 10 minutes (yes/no)" "no" DO_DH_PARAMS
     [ "$DO_DH_PARAMS" = "yes" ] || unset DO_DH_PARAMS
     export DO_DH_PARAMS

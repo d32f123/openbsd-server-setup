@@ -21,7 +21,13 @@ doas rcctl reload dovecot || {
     echo "${RED}Failed to reload dovecot${NORM}"
     exit 1
 }
-doas smtpctl update table credentials
-doas smtpctl update table virtuals
+doas smtpctl update table credentials || {
+    echo "${RED}Failed to update table 'credentials'"
+    exit 1
+}
+doas smtpctl update table virtuals || {
+    echo "${RED}Failed to update table 'virtuals'"
+    exit 1
+}
 
 echo "${GREEN}User created${NORM}"

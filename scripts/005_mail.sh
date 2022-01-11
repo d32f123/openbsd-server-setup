@@ -32,7 +32,8 @@ for f in $CREDENTIALS $VIRTUALS $ALIASES; do
     doas touch $f
     doas chmod 0440 $f
 done
-doas chown _smtpd:_dovecot $CREDENTIALS
+doas newaliases
+doas chown _smtpd:_dovecot $CREDENTIALS $VIRTUALS $ALIASES $ALIASES.db
 
 doas mkdir $VMAIL_ROOT
 doas chown $VMAIL_USER:$VMAIL_USER $VMAIL_ROOT
@@ -53,6 +54,8 @@ doas rcctl restart dovecot || doas rcctl restart dovecot || doas rcctl restart d
 }
 
 echo "${YELLOW}Creating virtual user $USER_NAME${NORM}"
+doas rcctl enable smtpd
+doas rcctl restart smtpd
 mail/create_user.sh $USER_NAME || {
     echo "${RED}Failed to create user $USER_NAME${NORM}"
     exit 1
@@ -72,7 +75,6 @@ doas newaliases
 # TODO: Prompt to add additional virtual users
 
 echo "${YELLOW}Restarting smtpd service${NORM}"
-doas rcctl enable smtpd
 doas rcctl restart smtpd || {
     echo "${RED}Failed to restart smtpd server${NORM}"
     exit 1
@@ -194,10 +196,11 @@ if [ -n "$DO_RAINLOOP" ]; then
     doas rcctl enable $FPM_SERVICE
     doas rcctl start $FPM_SERVICE
     doas mkdir /var/www/etc
-    doas ln /etc/resolv.conf /var/www/etc/resolv.conf
+    doas ln -s /etc/resolv.conf /var/www/etc
+    doas ln /etc/hosts /var/www/etc || doas cp /etc/hosts /var/www/etc
 
     # This is to generate the RainLoop directories
-    wget -O /dev/null $MAIL_DOMAIN
+    wget -O /dev/null --no-check-certificate $MAIL_DOMAIN
     RAINLOOP_ROOT=/var/www/$MAIL_DOMAIN/data/_data_/_default_
 
     doas sed -e "s/{{domain}}/$DOMAIN_NAME/;" mail/application.template.ini | doas tee $RAINLOOP_ROOT/configs/application.ini >/dev/null

@@ -27,11 +27,15 @@ fi
 
 echo "${YELLOW}Getting SSL certificates, switching to secure sites${NORM}"
 for site in $NGINX_DOMAINS; do
-    doas certbot certonly --webroot --agree-tos -m "$USER_NAME@$DOMAIN_NAME" -d "$site,www.$site" -w $NGINX_WWW/$site
+    doas certbot certonly --webroot --agree-tos -m "$USER_NAME@$DOMAIN_NAME" -d "$site,www.$site" -w "$NGINX_WWW/$site" $CERTBOT_FLAGS || {
+        echo "${RED}Failed to get certificate for $site${NORM}"
+        continue
+    }
+    success=yes
     doas ln -s -f $NGINX_CONF/{sites-available,sites-enabled}/${site}.secure.site
     doas rm $NGINX_CONF/sites-enabled/${site}.insecure.site
 done
-doas /etc/rc.d/nginx reload || {
+[ -n "$success" ] && doas /etc/rc.d/nginx reload || {
     echo "${RED}Failed to load nginx with the new configuration${NORM}"
     exit 1
 }
