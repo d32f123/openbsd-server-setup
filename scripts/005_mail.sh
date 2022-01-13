@@ -196,8 +196,10 @@ if [ -n "$DO_RAINLOOP" ]; then
     doas rcctl enable $FPM_SERVICE
     doas rcctl start $FPM_SERVICE
     doas mkdir /var/www/etc
-    doas ln -s /etc/resolv.conf /var/www/etc
-    doas ln /etc/hosts /var/www/etc || doas cp /etc/hosts /var/www/etc
+    for file in /etc/resolv.conf /etc/hosts
+    do
+        doas ln $file /var/www/etc || doas cp $file /var/www/etc
+    done
 
     # This is to generate the RainLoop directories
     wget -O /dev/null --no-check-certificate $MAIL_DOMAIN
