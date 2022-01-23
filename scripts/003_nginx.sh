@@ -1,12 +1,14 @@
 #!/bin/sh
 
+ENVS="$(dirname $0)/../env.d"
+. "$ENVS/general.sh"
+
+echo "${YELLOW}Downloading dependencies${NORM}"
+doas pkg_add nginx || panic "Failed to download dependencies"
+
 doas rcctl enable nginx
 
-NGINX_LOGS=/var/log/nginx
-NGINX_CONF=/etc/nginx
-NGINX_WWW=/var/www
-NGINX_USER=www
-NGINX_GROUP=www
+. "$ENVS/nginx.sh"
 
 echo "${YELLOW}Setting up $NGINX_LOGS directory${NORM}"
 doas mkdir $NGINX_LOGS
@@ -35,7 +37,4 @@ sed -e "s/{{title}}/$DOMAIN_NAME/;
 " nginx/site-templates/index.html | doas tee $NGINX_WWW/$DOMAIN_NAME/index.html >/dev/null
 
 echo "${YELLOW}Reloading nginx with sites' configurations${NORM}"
-doas /etc/rc.d/nginx restart || {
-    echo "${RED}Could not start nginx with the new configuration${NORM}"
-    exit 1
-}
+doas /etc/rc.d/nginx restart || panic "Could not start nginx with the new configuration"

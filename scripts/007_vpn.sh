@@ -1,15 +1,16 @@
 #!/bin/sh
 
+ENVS="$(dirname $0)/../env.d"
+. "$ENVS/general.sh"
+
+echo "${YELLOW}Downloading VPN dependencies${NORM}"
+doas pkg_add base64 libqrencode wireguard-tools ipcalc coreutils || panic "Failed to download dependencies"
+
 SYSCTL_CONF=/etc/sysctl.conf
 IKED_CONF=/etc/iked.conf
+. "$ENVS/vpn.sh"
 
-MAIN_IF="$(ls /etc/hostname.* | grep -v enc | grep -v wg | head -1 | cut -d. -f 2)"
-MAIN_IP="$(ifconfig $MAIN_IF | grep inet | grep -v inet6 | cut -d' ' -f2)"
-MAIN_IP6="$(ifconfig $MAIN_IF | grep inet6 | grep -v '%' | cut -d' ' -f2)"
-
-VPN_USER=vpn
-
-echo "${YELLOW}Configuring VPN on $MAIN_IF. IP: $MAIN_IP. IPv6: $MAIN_IP6. VPN user: $VPN_USER${NORM}"
+echo "${YELLOW}Configuring VPN on $MAIN_IF. IP: $MAIN_IP. IPv6: ${MAIN_IP6:-<none>}. VPN user: $VPN_USER${NORM}"
 
 sysctlset() {
     option="$1"
@@ -64,85 +65,69 @@ WG_NET6="fc00:dead:beef:1000::1 52"
 
 N_THREADS=$(doas sysctl | grep hw.ncpu= | cut -d= -f2)
 
-UNBOUND_SED_EXPR="s/{{n_threads}}/$N_THREADS/g;
+{ [ -n "$MAIN_IP6" ] && cat || sed -e '/# IPv6/d;'; } <vpn/unbound.template.conf | \
+	sed -e "s/{{n_threads}}/$N_THREADS/g;
 s/{{main_if}}/$MAIN_IF/g;
 s/{{main_ip}}/$MAIN_IP/g;
-s?{{vpn_net}}?$BASE_VPN_NET?g;"
-[ -n "$MAIN_IP6" ] && {
-	UNBOUND_SED_EXPR="$UNBOUND_SED_EXPR
+s?{{vpn_net}}?$BASE_VPN_NET?g;
 s?{{main_ipv6}}?$MAIN_IP6?g;
-s?{{vpn_net6}}?$BASE_VPN_NET6?g;"
-} || {
-	UNBOUND_SED_EXPR="$UNBOUND_SED_EXPR
-/# IPv6/d;" # Remove lines ending with "# IPv6" since IPv6 is not enabled on this server
-}
-sed -e "$UNBOUND_SED_EXPR" vpn/unbound.template.conf | doas tee $UNBOUND_CONF >/dev/null
+s?{{vpn_net6}}?$BASE_VPN_NET6?g;" | doas tee $UNBOUND_CONF >/dev/null
 
 echo "${YELLOW}Enabling and starting Unbound DNS server${NORM}"
 doas chown $UNBOUND_USER:$UNBOUND_GROUP $UNBOUND_ROOT
 doas rcctl enable unbound
-doas rcctl restart unbound || {
-	echo "${RED}Failed to start Unbound with the new configuration${NORM}"
-	exit 1
-}
+doas rcctl restart unbound || panic "Failed to start Unbound with the new configuration"
 
-if [ -n "$DO_IKEV2" ]; then
+prompt_bool "Set up IKEv2? It is less secure than WireGuard" "n" && {
+	DO_IKEV2="yes"
 	echo "${YELLOW}Configuring IKEv2 virtual interface $IKEV2_VPN_IF${NORM}"
 
-	echo "inet $IKEV2_VPN_ADDR $IKEV2_VPN_NTMSK $IKEV2_VPN_BRDCST
-inet6 $IKEV2_VPN_ADDR6
-up" | doas tee /etc/hostname.$IKEV2_VPN_IF >/dev/null
+	echo "inet $IKEV2_VPN_ADDR $IKEV2_VPN_NTMSK $IKEV2_VPN_BRDCST" | doas tee /etc/hostname.$IKEV2_VPN_IF >/dev/null
+	[ -n "$MAIN_IP6" ] && { echo "inet6 $IKEV2_VPN_ADDR6" | doas tee -a /etc/hostname.$IKEV2_VPN_IF >/dev/null ; }
+	echo "up" | doas tee -a /etc/hostname.$IKEV2_VPN_IF >/dev/null
+
 	doas sh /etc/netstart
 
-	echo "${PURPLE}Enter password for IKEv2 VPN: ${NORM}\c" >/dev/tty ; stty -echo ; read password ; stty echo ; echo >/dev/tty ; 
+	prompt_password "Enter password for IKEv2 VPN:" password
+	{ [ -n "$MAIN_IP6" ] && cat || sed -e '/# IPv6/,/# IPv6 end/d;'; } <vpn/iked.template.conf | \
 	sed -e "s?{{ikev2_net6}}?$IKEV2_VPN_NET6?g;
 s?{{ikev2_net}}?$IKEV2_VPN_NET?g;
 s/{{main_if}}/$MAIN_IF/g;
-s?{{password}}?$password?g;" vpn/iked.template.conf | doas tee $IKED_CONF >/dev/null
+s?{{password}}?$password?g;" | doas tee $IKED_CONF >/dev/null
 	unset password
 	doas chmod 600 $IKED_CONF
 
 	echo "${YELLOW}Enabling and starting IKEd service${NORM}"
 	doas rcctl enable iked
-	doas rcctl restart iked || {
-		echo "${RED}Failed to start IKEd with the new configuration${NORM}"
-		exit 1
-	}
-fi
+	doas rcctl restart iked || panic "Failed to start IKEd with the new configuration"
+}
 
 echo "${YELLOW}Configuring WireGuard VPN interface $WG_IF${NORM}"
 echo "$WG_NET wgport $WG_PORT wgkey $(openssl rand -base64 32)" | doas tee /etc/hostname.$WG_IF >/dev/null
-[ -n "$MAIN_IP6" ] && echo "inet6 $WG_NET6" | doas tee /etc/hostname.$WG_IF >/dev/null
+[ -n "$MAIN_IP6" ] && echo "inet6 $WG_NET6" | doas tee -a /etc/hostname.$WG_IF >/dev/null
 doas chmod 600 /etc/hostname.$WG_IF
 
 echo "${YELLOW}Restarting machine networking${NORM}"
-doas sh /etc/netstart || {
-	echo "${RED}Failed to restart network services${NORM}"
-	exit 1
-}
+doas sh /etc/netstart || panic "Failed to restart network services"
 WG_PUBKEY="$(doas ifconfig $WG_IF | grep wgpubkey | cut -d' ' -f2)"
 
 echo "${YELLOW}Configuring Packet Filter${NORM}"
 
-{ [ -n "$DO_IKEV2" ] && cat || sed -e '/ikev2/d' ; } <vpn/pf.template.conf | \
-   { [ -n "$MAIN_IP6" ] && cat || sed -e '/ # IPv6/d' ; } | \
+{ [ -n "$DO_IKEV2" ] && cat || sed -e '/ikev2/d'; } <vpn/pf.template.conf | \
+   { [ -n "$MAIN_IP6" ] && cat || sed -e '/ # IPv6/d'; } | \
    sed -e "s/{{ikev2_if}}/$IKEV2_VPN_IF/g;
 s/{{wg_if}}/$WG_IF/g;
 s/{{main_if}}/$MAIN_IF/g;" | doas tee -a /etc/pf.conf >/dev/null
 
 echo "${YELLOW}Restarting Packet Filter${NORM}"
-doas pfctl -f /etc/pf.conf || {
-	echo "${RED}Failed to start pf with the new configuration${NORM}"
-	exit 1
-}
+doas pfctl -f /etc/pf.conf || panic "Failed to start pf with the new configuration"
 
 echo "${YELLOW}Creating a default user for WireGuard VPN${NORM}"
 export MAIN_IF MAIN_IP MAIN_IP6 WG_IF WG_NET WG_NET6 WG_PUBKEY WG_PORT
 vpn/wg_create_user.sh $USER_NAME
 
-echo "${YELLOW}Creating a cron job to clear up VPN configurations available on https://$VPN_DOMAIN/ daily${NORM}"
-CRONJOB="@daily ls -d /var/www/$VPN_DOMAIN/*/ | xargs rm -rf"
-{ doas crontab -l 2>/dev/null ; echo "$CRONJOB" ; } | doas crontab -
+echo "${YELLOW}Creating an entry in /etc/daily.local to clear up VPN configurations available on https://$VPN_DOMAIN/ daily${NORM}"
+echo "@daily ls -d /var/www/$VPN_DOMAIN/*/ | xargs rm -rf" | doas tee -a /etc/daily.local >/dev/null
 
 echo "${PURPLE}${BOLD}You can create additional users for WireGuard by running ./vpn/wg_create_user.sh${NORM}"
 

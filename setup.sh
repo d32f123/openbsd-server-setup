@@ -1,5 +1,4 @@
 #!/bin/sh
-
 # Usage: ./setup.sh [bootstrap] [shell] [nginx] [ssl [--ssl-test]] [mail] [pf] [vpn]
 #   By default runs all
 
@@ -20,64 +19,26 @@ for arg in "$@"; do
     esac
 done
 
-prompt_user() {
-    prompt="$1"
-    default="$2"
-    result="$3"
-    echo "${PURPLE}${BOLD}$prompt [$default] ${NORM}\c"
-    read "$result"
-    [ -z "$(eval echo \$$result)" ] && eval "$result=$default"
-}
-export prompt_user
-
-# Colors
-RED="\033[0;31m"
-YELLOW="\033[0;33m"
-BOLD="\033[1m"
-PURPLE="\033[0;35m"
-GREEN="\033[0;32m"
-NORM="\033[0m"
-export RED YELLOW BOLD PURPLE GREEN NORM
-
 # ----
-[ -z "$USER_NAME" ] && prompt_user "Which user should become the main user?" "$(whoami)" USER_NAME
-[ -z "$DOMAIN_NAME" ] && prompt_user "Please enter the domain name of your server." "$(hostname | cut -d. -f2-)" DOMAIN_NAME
-[ -z "$MAIN_DOMAIN" ] && prompt_user "Mail domain:" "mail.$DOMAIN_NAME" MAIL_DOMAIN
-[ -z "$VPN_DOMAIN" ] && prompt_user "VPN domain:" "vpn.$DOMAIN_NAME" VPN_DOMAIN
-export USER_NAME DOMAIN_NAME MAIL_DOMAIN VPN_DOMAIN
-
-NGINX_DOMAINS="$DOMAIN_NAME $MAIL_DOMAIN $VPN_DOMAIN"
-echo "${YELLOW}Will setup these domains: $NGINX_DOMAINS"
-export NGINX_DOMAINS
-
 BASE="$(pwd)"
 SCRIPTS="$BASE/scripts"
+ENVS="$BASE/env.d"
+. "$ENVS/general.sh"
+
+echo -n "${YELLOW}${BOLD}"
+echo "User: $USER_NAME"
+echo "Base domain name: $DOMAIN_NAME"
+echo "Mail domain name: $MAIL_DOMAIN"
+echo "VPN domain name: $VPN_DOMAIN"
+echo -n "${NORM}"
 
 [ -n "$run_all" ] || [ -n "$run_bootstrap" ] && { "$SCRIPTS/001_bootstrap.sh" || exit 1 ; }
 [ -n "$run_all" ] || [ -n "$run_shell" ] && { "$SCRIPTS/002_shell.sh" || exit 1 ; }
 [ -n "$run_all" ] || [ -n "$run_nginx" ] && { "$SCRIPTS/003_nginx.sh" || exit 1 ; }
 [ -n "$run_all" ] || [ -n "$run_ssl" ] && {
     [ -n "$ssl_test" ] && export CERTBOT_FLAGS="--server https://{{local}}:14000/dir --no-verify-ssl"
-    prompt_user "Generate custom DH params for SSL? It will take about 10 minutes (yes/no)" "no" DO_DH_PARAMS
-    [ "$DO_DH_PARAMS" = "yes" ] || unset DO_DH_PARAMS
-    export DO_DH_PARAMS
-
-    prompt_user "Enable HSTS preload? Read more at https://hstspreload.org/ (yes/no)" "no" DO_HSTS_PRELOAD
-    [ "$DO_HSTS_PRELOAD" = "yes" ] || unset DO_HSTS_PRELOAD
-    export DO_HSTS_PRELOAD
-
     "$SCRIPTS/004_ssl.sh" || exit 1
 }
-[ -n "$run_all" ] || [ -n "$run_mail" ] && { 
-    prompt_user "Install RainLoop WebMail? (yes/no)" "yes" DO_RAINLOOP
-    [ "$DO_RAINLOOP" = "yes" ] || unset DO_RAINLOOP
-    export DO_RAINLOOP
-    "$SCRIPTS/005_mail.sh" || exit 1
-}
+[ -n "$run_all" ] || [ -n "$run_mail" ] && { "$SCRIPTS/005_mail.sh" || exit 1 ; }
 [ -n "$run_all" ] || [ -n "$run_pf" ] && { "$SCRIPTS/006_pf.sh" || exit 1 ; }
-[ -n "$run_all" ] || [ -n "$run_vpn" ] && { 
-    prompt_user "Set up IKEv2? It is less secure than WireGuard (yes/no)" "no" DO_IKEV2
-    [ "$DO_IKEV2" = "yes" ] || unset DO_IKEV2
-    export DO_IKEV2
-    "$SCRIPTS/007_vpn.sh" || exit 1
-}
+[ -n "$run_all" ] || [ -n "$run_vpn" ] && { "$SCRIPTS/007_vpn.sh" || exit 1 ; }

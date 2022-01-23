@@ -1,24 +1,24 @@
-#!/usr/local/bin/zsh
+#!/bin/sh
+
+ENVS="$(dirname $0)/../env.d"
+. "$ENVS/general.sh" # for panic function
+
+echo "${YELLOW}Downloading shell environment and utilities${NORM}"
+doas pkg_add vim zsh zsh-syntax-highlighting bash curl git cmake gmake g++ wget coreutils || panic "Failed to download dependencies"
 
 # set zsh as default shell
 chsh -s "$(which zsh)"
-
-# setup shell
 echo "${YELLOW}Setting up shell environment${NORM}"
-pushd
+
+zsh -s <<'EOF' || panic "Failed to setup shell environment"
+# setup shell
+cd $(mktemp -d)
 git clone --depth 1 https://github.com/d32f123/shell-environment.git
 
-cd shell-environment && ./setup.sh || {
-    echo "${RED}Failed to set up Shell environment${NORM}"
-    exit 1
-}
-cd -
-rm -rf shell-environment
-popd
-
+cd shell-environment && ./setup.sh || exit 1
 source ~/.config/zsh/.zshrc
 
 # build gitstatus, as it is not built for openbsd by default
-pushd $ZSH/custom/themes/powerlevel10k/gitstatus
+cd $ZSH/custom/themes/powerlevel10k/gitstatus
 bash build -w
-popd
+EOF

@@ -1,18 +1,19 @@
 #!/bin/sh
 
-MAIL_CONF_DIR=/etc/mail
-MAIL_CONF=$MAIL_CONF_DIR/smtpd.conf
-CERT_DIR="/etc/letsencrypt/live/$MAIL_DOMAIN"
+ENVS="$(dirname $0)/../env.d"
+. "$ENVS/general.sh"
 
-doas [ ! -d "$CERT_DIR" ] && echo "${RED}Get an SSL certificate for $MAIL_DOMAIN first${NORM}" && exit 1
+echo "${YELLOW}Downloading dependencies${NORM}"
+doas pkg_add wget opensmtpd-extras opensmtpd-filter-senderscore opensmtpd-filter-rspamd \
+  opendkim dovecot dovecot-pigeonhole rspamd || panic "Failed to download dependencies"
+
+. "$ENVS/mail.sh"
+
+doas [ ! -d "$CERT_DIR" ] && panic "Get an SSL certificate for $MAIL_DOMAIN first"
 
 echo "${YELLOW}Creating vmail account${NORM}"
-VMAIL_USER=vmail
-VMAIL_ROOT=/var/vmail
 doas useradd -c "Virtual Mail Account" -d $VMAIL_ROOT -s /sbin/nologin -L staff $VMAIL_USER
-
-VMAIL_UID="$(id -ru $VMAIL_USER)"
-VMAIL_GID="$(id -rg $VMAIL_USER)"
+. "$(dirname $0)/../env.d/mail.sh"
 
 echo "${YELLOW}Configuring smtpd $MAIL_CONF${NORM}"
 doas cp -f $MAIL_CONF_DIR/{smtpd.conf,smtpd.bak.conf}
@@ -20,13 +21,7 @@ sed "s/{{base_domain}}/$DOMAIN_NAME/g;
      s/{{mail_domain}}/$MAIL_DOMAIN/g;
      s/{{vmail_user}}/$VMAIL_USER/g;" mail/smtpd.template.conf | doas tee $MAIL_CONF >/dev/null
 
-CREDENTIALS=$MAIL_CONF_DIR/credentials
-VIRTUALS=$MAIL_CONF_DIR/virtuals
-ALIASES=$MAIL_CONF_DIR/aliases
-
 echo "$MAIL_DOMAIN" | doas tee $MAIL_CONF_DIR/mailname >/dev/null
-
-export CREDENTIALS VIRTUALS ALIASES VMAIL_USER VMAIL_UID VMAIL_GID VMAIL_ROOT
 
 for f in $CREDENTIALS $VIRTUALS $ALIASES; do
     doas touch $f
@@ -48,18 +43,12 @@ doas cap_mkdb /etc/login.conf # update login.conf db
 
 # Disable ssl file since we already put ssl info in local.conf
 doas mv /etc/dovecot/conf.d/10-ssl.conf /etc/dovecot/conf.d/10-ssl.conf.disabled
-doas rcctl restart dovecot || doas rcctl restart dovecot || doas rcctl restart dovecot || {
-    echo "${RED}Dovecot failed to start${NORM}"
-    exit 1
-}
+doas rcctl restart dovecot || doas rcctl restart dovecot || doas rcctl restart dovecot || panic "Dovecot failed to start"
 
 echo "${YELLOW}Creating virtual user $USER_NAME${NORM}"
 doas rcctl enable smtpd
 doas rcctl restart smtpd
-mail/create_user.sh $USER_NAME || {
-    echo "${RED}Failed to create user $USER_NAME${NORM}"
-    exit 1
-}
+mail/create_user.sh $USER_NAME || panic "Failed to create user $USER_NAME"
 
 main_user_mail_aliases="root abuse hostmaster postmaster webmaster"
 echo "${YELLOW}Adding aliases $main_user_mail_aliases for $USER_NAME${NORM}"
@@ -75,10 +64,7 @@ doas newaliases
 # TODO: Prompt to add additional virtual users
 
 echo "${YELLOW}Restarting smtpd service${NORM}"
-doas rcctl restart smtpd || {
-    echo "${RED}Failed to restart smtpd server${NORM}"
-    exit 1
-}
+doas rcctl restart smtpd || panic "Failed to restart smtpd server"
 
 echo "${YELLOW}Configuring Dovecot${NORM}"
 
@@ -106,10 +92,7 @@ doas chown root:bin $SIEVE_ROOT/sa-learn-ham.sh $SIEVE_ROOT/sa-learn-spam.sh
 
 echo "${YELLOW}Restarting dovecot service${NORM}"
 doas rcctl enable dovecot
-doas rcctl restart dovecot || {
-    echo "${RED}Failed to load dovecot with the new configuration${NORM}"
-    exit 1
-}
+doas rcctl restart dovecot || panic "Failed to load dovecot with the new configuration"
 
 echo "${YELLOW}Configuring spamd"
 doas mkdir $MAIL_CONF_DIR/dkim
@@ -145,15 +128,12 @@ sed "s/{{domain}}/$DOMAIN_NAME/g;
 
 echo "${YELLOW}Restarting rspamd service${NORM}"
 doas rcctl enable redis rspamd
-doas rcctl start redis rspamd || {
-    echo "${RED}Failed to restart rspamd${NORM}"
-    exit 1
-}
+doas rcctl start redis rspamd || panic "Failed to restart rspamd"
 
-if [ -n "$DO_RAINLOOP" ]; then
+prompt_bool "Install RainLoop WebMail?" "y" && {
     echo "${YELLOW}Installing RainLoop${NORM}"
     doas pkg_add php php-curl php-pdo_sqlite php-zip zip unzip
-    cd $(mktemp -d)
+    cd "$(mktemp -d)"
     wget https://www.rainloop.net/repository/webmail/rainloop-latest.zip
     doas unzip rainloop-latest.zip -d /var/www/$MAIL_DOMAIN/
     cd -
@@ -184,7 +164,7 @@ if [ -n "$DO_RAINLOOP" ]; then
         fastcgi_pass unix:run/php-fpm.sock;\
     }\
 ' /etc/nginx/sites-available/$MAIL_DOMAIN.secure.site
-    doas nginx -s reload
+    doas nginx -s reload || panic "Failed to reload nginx with PHP config"
 
     echo "${YELLOW}Configuring RainLoop${NORM}"
     PHP_VERSION=$(ls -d /etc/php-*.sample | head -1 | sed -E 's/.*php-(.*)\.sample/\1/')
@@ -212,7 +192,7 @@ if [ -n "$DO_RAINLOOP" ]; then
     doas chown www:www $RAINLOOP_ROOT/domains/$DOMAIN_NAME.ini
 
     echo "${BOLD}${PURPLE}RainLoop is available at: https://$MAIL_DOMAIN/"
-fi
+}
 
 
 echo "${BOLD}${PURPLE}----MAIL CONFIGURATION DONE----"

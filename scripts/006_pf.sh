@@ -33,6 +33,5 @@ echo "$pf_conf" | doas tee -a $PF_CONF >/dev/null
 
 doas rcctl enable pf
 
-echo "${YELLOW}Creating a cron job to clear old bans daily${NORM}"
-CRONJOB="@daily pfctl -t bruteforce -T expire 86400"
-{ doas crontab -l 2>/dev/null ; echo "$CRONJOB" ; } | doas crontab -
+echo "${YELLOW}Making an entry in /etc/daily.local to clear old bans daily${NORM}"
+echo "@daily pfctl -t bruteforce -T expire 86400" | doas tee -a /etc/daily.local >/dev/null
