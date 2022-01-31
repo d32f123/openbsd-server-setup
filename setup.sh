@@ -25,6 +25,7 @@ SCRIPTS="$BASE/scripts"
 ENVS="$BASE/env.d"
 . "$ENVS/general.sh"
 
+self=$$
 echo -n "${YELLOW}${BOLD}"
 echo "User: $USER_NAME"
 echo "Base domain name: $DOMAIN_NAME"
@@ -42,7 +43,7 @@ do
         { 
             "$SCRIPTS/$(printf '%03d' $i)_$stage.sh" || {
                 echo "${RED}${BOLD}[FATAL] Something went wrong here${NORM}" | postinstall
-                exit 1
+                kill $self
             }
         } | log
         echo "${YELLOW}${BOLD}---Stage $stage DONE---${NORM}" | postinstall | log

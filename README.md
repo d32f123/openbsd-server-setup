@@ -44,11 +44,12 @@ set up these domains explicitly instead:
 
 1. Get a VPS or a physical host with OpenBSD
 2. Do the prerequisites (see above)
-3. Create a user for yourself and login
-4. `git clone https://github.com/d32f123/openbsd-server-setup` // TODO: Repalce with wget
-5. `cd openbsd-server-setup; ./setup.sh`
-6. Follow the script's instructions
-7. Do any post-install actions (see generated `post-install.txt`)
+3. Create a user for yourself (**note: add user to group `wheel` and/or enable `doas` for your user**) and login
+4. Create a dir for the scripts: `mkdir openbsd-server-setup && cd openbsd-server-setup`
+5. Download the repo: `wget -O - https://github.com/d32f123/openbsd-server-setup/releases/download/latest/openbsd-server-setup.tar.gzip | tar -xzvf -`
+6. `./setup.sh`
+7. Follow the script's instructions
+8. Do any post-install actions (see generated `post-install.txt`)
 
 ## Running
 ```sh
