@@ -15,30 +15,37 @@ IPv6 only **WILL NOT** work. You can still use this repo as a reference though.
 * VPN: WireGuard, OpenIKED (optional), Unbound, PF
 
 ## Prerequisites
-You will have to set up some DNS records prior to running this script.  
-Create the following DNS records:
-```
-;; Host      TTL  Type  Value
-*.{domain}.	 300	IN	A	{ip}
-{domain}.	   300	IN	A	{ip}
-www.{domain} 300	IN	A	{ip}
-```
-
-**Note:** If you cannot use wildcard (*.{domain}.) record, 
-set up these domains explicitly instead:  
-`vpn.{domain}, mail.{domain}, www.vpn.{domain}, www.mail.{domain}, www.{domain}, {domain}`
-
 If you want to enable *IPv6*, then add this line to your /etc/hostname.*:
 ```
 inet6 autoconf -temporary -soii
 ```
+
+You will have to set up some DNS records prior to running this script.  
+Create the following DNS records:
+```
+;; Host       TTL Type  Value
+*.{domain}.	  300	IN	A	{ip}
+{domain}.	    300	IN	A	{ip}
+www.{domain}. 300	IN	A	{ip}
+
+;; Only for IPv6:
+*.{domain}.   300 IN  AAAA {ipv6}
+{domain}.     300 IN  AAAA {ipv6}
+www.{domain}. 300 IN  AAAA {ipv6}
+```
+
+Use `ifconfig` to get your IP address or consult your VPS provider.
+
+**Note:** If you cannot use wildcard (*.{domain}.) record, 
+set up these domains explicitly instead:  
+`vpn.{domain}, mail.{domain}, www.vpn.{domain}, www.mail.{domain}, www.{domain}, {domain}`
 
 ## Usage
 
 1. Get a VPS or a physical host with OpenBSD
 2. Do the prerequisites (see above)
 3. Create a user for yourself and login
-4. `git clone https://github.com/d32f123/openbsd-server-setup`
+4. `git clone https://github.com/d32f123/openbsd-server-setup` // TODO: Repalce with wget
 5. `cd openbsd-server-setup; ./setup.sh`
 6. Follow the script's instructions
 7. Do any post-install actions (see generated `post-install.txt`)

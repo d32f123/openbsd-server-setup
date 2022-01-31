@@ -1,0 +1,18 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Create archive
+        run: tar -czvf openbsd-server-setup.tar.gzip --exclude ".git*" --exclude "workflow" --exclude "openbsd-server-setup.tar.gzip" ./*
+      - name: Upload archive
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "openbsd-server-setup.tar.gzip"
+          token: ${{ secrets.GITHUB_TOKEN }}
