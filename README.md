@@ -153,4 +153,4 @@ or mail me at <anesterov@anesterov.xyz>. I will be grateful for any kind of feed
 
 ## [Development (see development.md)](./docs/development.md)
 
-## [Acknowledgements (see acknowledgements.md)](./docs/acknowledgement.md)
+## [Acknowledgements (see acknowledgements.md)](./docs/acknowledgements.md)
