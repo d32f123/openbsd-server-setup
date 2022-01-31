@@ -1,7 +1,7 @@
 #!/bin/sh
 
 ENVS="$(dirname $0)/../env.d"
-. "$ENVS/general.sh" # for panic function
+. "$ENVS/general.sh"
 
 echo "${YELLOW}Downloading shell environment and utilities${NORM}"
 doas pkg_add vim zsh zsh-syntax-highlighting bash curl git cmake gmake g++ wget coreutils || panic "Failed to download dependencies"
@@ -22,3 +22,5 @@ source ~/.config/zsh/.zshrc
 cd $ZSH/custom/themes/powerlevel10k/gitstatus
 bash build -w
 EOF
+
+echo "${PURPLE}${BOLD}Run zsh and tmux to see what have been installed${NORM}" | postinstall

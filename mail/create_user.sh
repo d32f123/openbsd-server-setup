@@ -18,8 +18,8 @@ unset password
 
 echo "${YELLOW}Creating user $username for domain $DOMAIN_NAME${NORM}"
 
-echo "${username}@${DOMAIN_NAME}:${encrypted_password}:$VMAIL_USER:$VMAIL_UID:$VMAIL_GID:$VMAIL_ROOT/$DOMAIN_NAME/$username::userdb_mail=maildir:$VMAIL_ROOT/$DOMAIN_NAME/$username" | doas tee -a "$CREDENTIALS"
-echo "${username}@${DOMAIN_NAME}: $VMAIL_USER" | doas tee -a "$VIRTUALS"
+echo "${username}@${DOMAIN_NAME}:${encrypted_password}:$VMAIL_USER:$VMAIL_UID:$VMAIL_GID:$VMAIL_ROOT/$DOMAIN_NAME/$username::userdb_mail=maildir:$VMAIL_ROOT/$DOMAIN_NAME/$username" | doas tee -a "$CREDENTIALS" >/dev/null
+echo "${username}@${DOMAIN_NAME}: $VMAIL_USER" | doas tee -a "$VIRTUALS" >/dev/null
 
 doas rcctl reload dovecot || panic "Failed to reload dovecot"
 doas smtpctl update table credentials || panic "Failed to update table 'credentials'"

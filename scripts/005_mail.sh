@@ -135,7 +135,7 @@ prompt_bool "Install RainLoop WebMail?" "y" && {
     doas pkg_add php php-curl php-pdo_sqlite php-zip zip unzip
     cd "$(mktemp -d)"
     wget https://www.rainloop.net/repository/webmail/rainloop-latest.zip
-    doas unzip rainloop-latest.zip -d /var/www/$MAIL_DOMAIN/
+    doas unzip -q rainloop-latest.zip -d /var/www/$MAIL_DOMAIN/
     cd -
     doas find /var/www/$MAIL_DOMAIN -type d -exec chmod 755 {} \;
     doas find /var/www/$MAIL_DOMAIN -type f -exec chmod 644 {} \;
@@ -191,12 +191,14 @@ prompt_bool "Install RainLoop WebMail?" "y" && {
     doas sed -e "s/{{mail_domain}}/$MAIL_DOMAIN/" mail/domain.template.ini | doas tee $RAINLOOP_ROOT/domains/$DOMAIN_NAME.ini >/dev/null
     doas chown www:www $RAINLOOP_ROOT/domains/$DOMAIN_NAME.ini
 
-    echo "${BOLD}${PURPLE}RainLoop is available at: https://$MAIL_DOMAIN/"
+    echo "${PURPLE}${BOLD}RainLoop is available at: https://$MAIL_DOMAIN/" | postinstall
 }
 
 
-echo "${BOLD}${PURPLE}----MAIL CONFIGURATION DONE----"
-echo "${BOLD}${PURPLE}Now place these entries in your DNS records:
+echo "${PURPLE}${BOLD}----MAIL CONFIGURATION DONE----"
+echo "${PURPLE}${BOLD}
+Use mail/{create,delete}_user.sh and mail/change_password.sh to manage accounts
+Now place these entries in your DNS records:
 $NORM$PURPLE$dns_records
 $NORM
-"
+" | postinstall

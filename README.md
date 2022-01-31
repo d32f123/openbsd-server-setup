@@ -1,5 +1,8 @@
 # Instructions and files to set up a functional OpenBSD server
 
+This collection of scripts will set up a Web server with SSL certificates, Mail server with anti-spoofing measures, and a VPN.  
+Pure shell scripts + config files, no unneeded dependencies.
+
 **Note:** IPv4 only and IPv4+IPv6 setups are supported. 
 IPv6 only **WILL NOT** work. You can still use this repo as a reference though.
 
@@ -7,154 +10,147 @@ IPv6 only **WILL NOT** work. You can still use this repo as a reference though.
 * Shell: zsh, oh-my-zsh, tmux
 * SSH
 * Web server – nginx with automatic http to https redirect and A+ SSL
-* Mail server – OpenSMTPD, Dovecot, Rspamd, Redis, RainLoop (+PHP, optional)
+* Mail server – OpenSMTPD, Dovecot, Rspamd, Redis, RainLoop (optional, pulls PHP)
 * Brute force protection: PF
-* VPN: OpenIKED, WireGuard, Unbound, PF
+* VPN: WireGuard, OpenIKED (optional), Unbound, PF
 
 ## Prerequisites
-You will have to set up some DNS records prior to running this script.
+You will have to set up some DNS records prior to running this script.  
 Create the following DNS records:
 ```
-*.{domain}.	300	IN	A	{ip}
-{domain}.	300	IN	A	{ip}
-www.{domain}	300	IN	A	{ip}
-
-;; DNS records for mail (will be output after stage 5)
-{domain}.	300	IN	MX	0 mail.{domain}. ;; so that people know which server serves mail for {domain}
-@      IN TXT  "v=spf1 mx a:mail.{domain} -all"
+;; Host      TTL  Type  Value
+*.{domain}.	 300	IN	A	{ip}
+{domain}.	   300	IN	A	{ip}
+www.{domain} 300	IN	A	{ip}
 ```
 
-Instead of using wildcard (*.{domain}.) you can just set up these domains explicitly:
-vpn.{domain}, mail.{domain}, www.vpn.{domain}, www.mail.{domain}, www.{domain}, {domain}
+**Note:** If you cannot use wildcard (*.{domain}.) record, 
+set up these domains explicitly instead:  
+`vpn.{domain}, mail.{domain}, www.vpn.{domain}, www.mail.{domain}, www.{domain}, {domain}`
 
 If you want to enable *IPv6*, then add this line to your /etc/hostname.*:
 ```
 inet6 autoconf -temporary -soii
 ```
 
+## Usage
+
+1. Get a VPS or a physical host with OpenBSD
+2. Do the prerequisites (see above)
+3. Create a user for yourself and login
+4. `git clone https://github.com/d32f123/openbsd-server-setup`
+5. `cd openbsd-server-setup; ./setup.sh`
+6. Follow the script's instructions
+7. Do any post-install actions (see generated `post-install.txt`)
+
 ## Running
 ```sh
-./setup.sh [stage] [--ssl-test]
-# Stages: bootstrap shell nginx ssl mail pf vpn
-# By default runs all stages
-# --ssl-test flag is used for local development (see `Local Development` section)
+./setup.sh [bootstrap] [shell] [nginx] [ssl [--ssl-test]] [mail] [pf] [vpn] 
 ```
+* When no options given, runs all stages sequentially
+* `--ssl-test` flag is used for [local development](./docs/development.md)
+* Before running the script, be sure to check the stages below and decide what you need.  
+* All relevant post-install information will be available at `post-install.txt` 
+  after the script completes, so don't be afraid if you lose some of the script's output.
 
 ## Script stages
 
-**Stages and their dependencies are located in [scripts/](scripts/) directory**. For dependencies, look for the `doas pkg_add ...` line in the beginning of the corresponding script.
+**Stages and their package dependencies are located in [./scripts/](scripts/) directory**.  
+Look for the `doas pkg_add ...` line in the beginning of the corresponding script.
 
-### Stage 1 – **bootstrap**
+### Stage 1 – [bootstrap]
 
 **Skip it if `doas` is already set up**
 
 Bootstrap does some basic configuration.  
 Currently it enables main user to do `doas` and enables slaacd for IPv6.
 
-### Stage 2 – **shell** setup
+### Stage 2 – [shell] setup
 
-Sets up zsh, tmux.  
+Sets up an opinionated zsh+tmux environment.  
 Completely optional.
 
-### Stage 3 – **nginx** setup
+### Stage 3 – [nginx] setup
 
-Depends on: **doas**
+Depends on: **doas**  
 Dependants: **ssl, mail, vpn**
 
-1. Creates nginx configuration and logs directories.
-2. Creates nginx configurations for domain.xxx and mail.domain.xxx
+1. Creates nginx configuration and logs directories
+2. Creates configs and dirs for sites domain.xxx, mail.domain.xxx, vpn.domain.xxx.  
+   If you are not planning to use mail or vpn, you might want to remove some of these configs.
 
-### Stage 4 – nginx **ssl** setup
+Websites are located under /var/www/  
+Configuration is located at /etc/nginx/
 
-Depends on: **doas, nginx**
+### Stage 4 – [ssl] setup
+
+Depends on: **doas, nginx**  
 Dependants: **mail**
 
 1. Gets certificates via certbot
 2. Switches nginx configuration to use only secure versions of domains
 
-### Stage 5 – **mail** server setup
+The certificates obtained here are also used to serve Mail frontend and VPN configurations.
+
+### Stage 5 – [mail] server setup
 
 Depends on: **doas, nginx, ssl**
 
-1. Sets up smtpd, dovecot, rspamd, redis
+1. Sets up smtpd (main mail server), dovecot (IMAP server), rspamd (mail signing)
 2. Creates a user account username@domainname
-3. There are scripts available to add, change password and to delete users
-4. Prints DNS records that you should set up
-5. Local mail is forwarded to vmail directories (to be able to fetch them via IMAP)
+3. There are scripts available to add and delete users, change passwords
+4. Makes local mail (sent by `$ mail ...` to local users) available over IMAP
+5. Requires post-install procedures (see below)
+6. (optional) sets up RainLoop web frontend. Available at mail.{{domain_name}}
 
-Optional: set up RainLoop web frontend
+**Additional post-install**
 
-Optional, manual: set up a reverseDNS record at your VPS provider
+**Required**:
+This stage will spew out some additional DNS records, which confirm that
+mail is indeed coming from your domain name (spoofing protection).
 
-Required if using VPS: port 25 is required to receive mail. 
+Optional: set up a reverseDNS record at your VPS provider
+
+**Note to VPS users**: port 25 is required to receive mail. 
 If you're using VPS chances are it is blocked by default.
 You will have to contact your VPS provider to open port 25.
 
-### Stage 6 – **pf** Packet Filter setup
+### Stage 6 – [pf] Packet Filter setup
 
 Sets up packet filter to block ips which spam your SSH, HTTP, HTTPS, IMAP, SMTP ports
 
-### Stage 7 – **vpn** setup
+### Stage 7 – [vpn] setup
 
 Depends on: **doas, nginx**
 
-Sets up OpenIKED IKEv2 and WireGuard VPN.
-Ideas taken from EdgeWalker script https://github.com/fazalmajid/edgewalker
+Sets up WireGuard VPN and optionally OpenIKED IKEv2.
+Spins up a local Unbound DNS server for better privacy.
 
-By default, IKEv2 configuration is not set up.
-IKEv2 uses Preshared key authentication. WireGuard uses asymmetric key + Preshared Key authentication.
+VPN configurations for new clients can be created via a script (WireGuard only).  
+Configurations are made available at a random endpoint at vpn.{{domain}}/  
+QRs are provided to simplify importing configs to mobile clients.
 
-New VPN configurations for new clients can be created via a script (WireGuard only).
-Configurations are made available at a random endpoint at vpn.{{domain}}/
+WireGuard uses asymmetric key + Preshared Key authentication. IKEv2 uses Preshared key authentication.
 
 ## Script parameters
+You can override the following envvars prior to running the script to modify it's behavior:
+- `USER_NAME` – the user which will be used for everything in the script. Defaults to current user.
+- `DOMAIN_NAME` – the domain name to create websites for. Defaults to `$(hostname | cut -d. -f2-)`
+- `MAIL_DOMAIN` – the domain name where mail server will be hosted. Defaults to `mail.$DOMAIN_NAME`
+- `VPN_DOMAIN` – the domain name where VPNs will be hosted (including their configurations). Defaults to `vpn.$DOMAIN_NAME`
 
-* `USER_NAME` – the user which will be used for everything in the script. Defaults to current user.
-* `DOMAIN_NAME` – the domain name to create websites for. Defaults to `$(hostname | cut -d. -f2-)`
-* `MAIL_DOMAIN` – the domain name where mail server will be hosted. Defaults to `mail.$DOMAIN_NAME`
-* `VPN_DOMAIN` – the domain name where VPNs will be hosted (including their configurations). Defaults to `vpn.$DOMAIN_NAME`
+## Feedback
 
-## Development
+Feel free to provide feedback and imrpovemend ideas / report any issues here on GitHub (issues or pull requests)  
+or mail me at <anesterov@anesterov.xyz>. I will be grateful for any kind of feedback!
 
-### Workbench setup
+## Future ideas
+- Add OpenVPN support
+- Add a prompt to create a cron that rotates DKIM keys  
+  (will require manual rotation at the DNS provider side 
+  (may be possible to automate for certain providersvia API))
+- Consider migrating from nginx to built-in httpd
 
-Virtualization software like VMWare Fusion can help with testing the scripts. To do local development against a vm, do the following setup.
+## [Development (see development.md)](./docs/development.md)
 
-1. Download and install the virtualization software of choice, an OpenBSD .iso and do a basic installation of OpenBSD on the VM.
-When installing, create a user `testuser`.
-2. Once inside the VM, do the following initial setup:
-    1. Configure networking so that the VM can communicate both with the Host and the outside world. In VMWare Fusion, this is done by selecting `Bridged Networking` option. Be sure to set a static IP for your VM inside of your network for easier maintanence (e.g set `/etc/hostname.em0` to `inet 192.168.0.111 255.255.255.0 192.168.0.255`). 
-    2. Edit `/etc/myname`, set it to `testserver.testserver.test`
-    3. Edit `/etc/mygate`, set it to your network's default gateway (usually `192.168.0.101`)
-    4. Edit `/etc/hosts`, add the following entry:
-        ```
-        {{VM Static IP}} testserver.test mail.testserver.test vpn.testserver.test www.testserver.test www.mail.testserver.test www.vpn.testserver.test
-        ```
-    5. Edit `/etc/resolv.conf`:
-       ```
-       nameserver <network's gate from step 3>
-       lookup file bind
-       ```
-    6. Enable sshd and set up a connection to testuser.
-    7. `pkg_add rsync`.
-    8. Reboot the VM for good measure.
-3. Add the same entry to `/etc/hosts` on the Host as in (2.4)
-4. Run `make rsync-vm`. This will send this whole directory to the VM and do a replace in [setup.sh](./setup.sh) that allows the VM to target the Host when requesting SSL certificates via Certbot.
-5. Spin up Pebble (stub certificate server) by running `make pebble` on the Host machine. See [test/pebble/](./test/pebble) for more info.
-6. SSH into the VM and run the script. You might want to test the stages one by one by running `./setup.sh <stage>`. **Note:** when running stage SSL, be sure to pass `--ssl-test` flag to target local Pebble server.
-
-**Note!** If you are using snapshots, the time will go terribly wrong on the VM. To fix it: `rdate pool.ntp.org`  
-Use `make ssh-vm` to do `rdate` and ssh to the VM in one go (requires `doas`)
-
-### Repo structure
-
-- README.md – usage instructions, general information about the scripts
-- Makefile – contains targets that ease development
-- setup.sh – main file that launches the scripts corresponding to particular Stages (see Stages section)
-- scripts/ – contains scripts for particular stages.
-- env.d/ – contains environment variables and aux functions used by different scripts.
-- mail/ - contains configuration templates for dovecot, smtpd et c. Also contains scripts that allow creating new users, deleting existing users and changing passwords.
-- nginx/ – contains configuration templates for nginx and site templates
-- vpn/ – contains configuration templates for IKEd, WireGuard.
-- vpn/wg_create_user.sh – creates additional WireGuard users
-- test/ - contains configuration files needed for local development and testing
+## [Acknowledgements (see acknowledgements.md)](./docs/acknowledgement.md)

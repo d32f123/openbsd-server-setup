@@ -37,4 +37,8 @@ sed -e "s/{{title}}/$DOMAIN_NAME/;
 " nginx/site-templates/index.html | doas tee $NGINX_WWW/$DOMAIN_NAME/index.html >/dev/null
 
 echo "${YELLOW}Reloading nginx with sites' configurations${NORM}"
-doas /etc/rc.d/nginx restart || panic "Could not start nginx with the new configuration"
+doas rcctl restart nginx || panic "Could not start nginx with the new configuration"
+
+echo "${PURPLE}${BOLD}Nginx configuration is available at $NGINX_CONF
+Websites serve roots are available at $NGINX_WWW
+Use \`doas rcctl reload nginx\` to reload nginx${NORM}" | postinstall

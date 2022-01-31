@@ -2,6 +2,9 @@
 
 ssh_port=$(grep -q -E "^Port [^#]+" /etc/ssh/sshd_config && sed -nE 's/^Port ([^#]+)/\1/p' /etc/ssh/sshd_config || echo ssh)
 
+ENVS="$(dirname $0)/../env.d"
+. "$ENVS/general.sh"
+
 echo "${YELLOW}Protecting ssh ($ssh_port) from brute force attacks
 Protecting mail auth (submission) from brute force attacks
 Protecting imap (imaps) from brute force attacks
@@ -35,3 +38,5 @@ doas rcctl enable pf
 
 echo "${YELLOW}Making an entry in /etc/daily.local to clear old bans daily${NORM}"
 echo "@daily pfctl -t bruteforce -T expire 86400" | doas tee -a /etc/daily.local >/dev/null
+
+echo "${PURPLE}${BOLD}See /etc/pf.conf for newly generated rules${NORM}" | postinstall

@@ -30,7 +30,7 @@ prompt_bool "Enable HSTS preload? Read more at https://hstspreload.org/" "n" && 
 
 echo "${YELLOW}Getting SSL certificates, switching to secure sites${NORM}"
 for site in $NGINX_DOMAINS; do
-    doas certbot certonly --webroot --agree-tos -m "$USER_NAME@$DOMAIN_NAME" -d "$site,www.$site" -w "$NGINX_WWW/$site" $CERTBOT_FLAGS || {
+    doas certbot certonly -n --webroot --agree-tos -m "$USER_NAME@$DOMAIN_NAME" -d "$site,www.$site" -w "$NGINX_WWW/$site" $CERTBOT_FLAGS || {
         echo "${RED}Failed to get certificate for $site${NORM}"
         continue
     }
@@ -38,7 +38,9 @@ for site in $NGINX_DOMAINS; do
     doas ln -s -f $NGINX_CONF/{sites-available,sites-enabled}/${site}.secure.site
     doas rm $NGINX_CONF/sites-enabled/${site}.insecure.site
 done
-[ -n "$success" ] && doas /etc/rc.d/nginx reload || panic "Failed to load nginx with the new configuration"
+[ -n "$success" ] && doas rcctl reload nginx || panic "Failed to load nginx with the new configuration"
 
 echo "${YELLOW}Setting an entry to /etc/monthly.local to update certificates monthly${NORM}"
 echo "@monthly $(which certbot) renew --quiet --force-renewal --post-hook '/etc/rc.d/nginx reload'" | doas tee -a /etc/monthly.local >/dev/null
+
+echo "${PURPLE}${BOLD}Certificates are available at /etc/letsencrypt/live${NORM}" | postinstall

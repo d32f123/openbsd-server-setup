@@ -14,7 +14,7 @@ prompt_bool() {
     default="$2"
     echo "${PURPLE}${BOLD}$prompt (y/n) [$default] ${NORM}\c"
     read res
-    case "$res" in
+    case "${res:-$default}" in
         y | yes | Y | YES) return 0;;
     esac
     return 1
@@ -36,6 +36,20 @@ panic() {
     exit 1
 }
 
+log_file() {
+    exec 3>&1
+    tee /dev/fd/3 | perl -pe 's/\033[^m]+m//g' >>"$1" # strip control characters
+    exec 3>&-
+}
+
+postinstall() {
+    log_file "$POSTINSTALL"
+}
+
+log() {
+    log_file "$LOGS"
+}
+
 # Colors
 RED="\033[0;31m"
 YELLOW="\033[0;33m"
@@ -51,3 +65,7 @@ export RED YELLOW BOLD PURPLE GREEN NORM
 [ -z "$VPN_DOMAIN" ] && VPN_DOMAIN="vpn.$DOMAIN_NAME"
 NGINX_DOMAINS="$DOMAIN_NAME $MAIL_DOMAIN $VPN_DOMAIN"
 export USER_NAME DOMAIN_NAME MAIL_DOMAIN VPN_DOMAIN NGINX_DOMAINS
+
+[ -z "$POSTINSTALL" ] && POSTINSTALL="$(dirname $0)/post-install.txt"
+[ -z "$LOGS" ] && LOGS="$(dirname $0)/logs.txt"
+export POSTINSTALL LOGS

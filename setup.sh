@@ -32,13 +32,19 @@ echo "Mail domain name: $MAIL_DOMAIN"
 echo "VPN domain name: $VPN_DOMAIN"
 echo -n "${NORM}"
 
-[ -n "$run_all" ] || [ -n "$run_bootstrap" ] && { "$SCRIPTS/001_bootstrap.sh" || exit 1 ; }
-[ -n "$run_all" ] || [ -n "$run_shell" ] && { "$SCRIPTS/002_shell.sh" || exit 1 ; }
-[ -n "$run_all" ] || [ -n "$run_nginx" ] && { "$SCRIPTS/003_nginx.sh" || exit 1 ; }
-[ -n "$run_all" ] || [ -n "$run_ssl" ] && {
-    [ -n "$ssl_test" ] && export CERTBOT_FLAGS="--server https://{{local}}:14000/dir --no-verify-ssl"
-    "$SCRIPTS/004_ssl.sh" || exit 1
-}
-[ -n "$run_all" ] || [ -n "$run_mail" ] && { "$SCRIPTS/005_mail.sh" || exit 1 ; }
-[ -n "$run_all" ] || [ -n "$run_pf" ] && { "$SCRIPTS/006_pf.sh" || exit 1 ; }
-[ -n "$run_all" ] || [ -n "$run_vpn" ] && { "$SCRIPTS/007_vpn.sh" || exit 1 ; }
+[ -n "$ssl_test" ] && export CERTBOT_FLAGS="--server https://{{local}}:14000/dir --no-verify-ssl"
+i=0
+for stage in bootstrap shell nginx ssl mail pf vpn
+do
+    i=$((i+1))
+    [ -n "$run_all" ] || eval "[ -n \"\$run_$stage\" ]" && {
+        echo "${YELLOW}${BOLD}---Stage $stage---${NORM}" | postinstall | log
+        { 
+            "$SCRIPTS/$(printf '%03d' $i)_$stage.sh" || {
+                echo "${RED}${BOLD}[FATAL] Something went wrong here${NORM}" | postinstall
+                exit 1
+            }
+        } | log
+        echo "${YELLOW}${BOLD}---Stage $stage DONE---${NORM}" | postinstall | log
+    }
+done
