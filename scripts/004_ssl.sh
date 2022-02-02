@@ -41,6 +41,6 @@ done
 [ -n "$success" ] && doas rcctl reload nginx || panic "Failed to load nginx with the new configuration"
 
 echo "${YELLOW}Setting an entry to /etc/monthly.local to update certificates monthly${NORM}"
-echo "@monthly $(which certbot) renew --quiet --force-renewal --post-hook '/etc/rc.d/nginx reload'" | doas tee -a /etc/monthly.local >/dev/null
+echo "$(which certbot) renew --quiet --force-renewal --post-hook '/etc/rc.d/nginx reload'" | doas tee -a /etc/monthly.local >/dev/null
 
 echo "${PURPLE}${BOLD}Certificates are available at /etc/letsencrypt/live${NORM}" | postinstall

@@ -129,7 +129,7 @@ export MAIN_IF MAIN_IP MAIN_IP6 WG_IF WG_NET WG_NET6 WG_PUBKEY WG_PORT
 vpn/wg_create_user.sh $USER_NAME | postinstall
 
 echo "${YELLOW}Creating an entry in /etc/daily.local to clear up VPN configurations available on https://$VPN_DOMAIN/ daily${NORM}"
-echo "@daily ls -d /var/www/$VPN_DOMAIN/*/ | xargs rm -rf" | doas tee -a /etc/daily.local >/dev/null
+echo "ls -d /var/www/$VPN_DOMAIN/*/ | xargs rm -rf" | doas tee -a /etc/daily.local >/dev/null
 
 echo "${PURPLE}${BOLD}You can create additional users for WireGuard by running ./vpn/wg_create_user.sh${NORM}" | postinstall
 

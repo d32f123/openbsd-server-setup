@@ -37,6 +37,6 @@ echo "$pf_conf" | doas tee -a $PF_CONF >/dev/null
 doas rcctl enable pf
 
 echo "${YELLOW}Making an entry in /etc/daily.local to clear old bans daily${NORM}"
-echo "@daily pfctl -t bruteforce -T expire 86400" | doas tee -a /etc/daily.local >/dev/null
+echo "pfctl -t bruteforce -T expire 86400" | doas tee -a /etc/daily.local >/dev/null
 
 echo "${PURPLE}${BOLD}See /etc/pf.conf for newly generated rules${NORM}" | postinstall
